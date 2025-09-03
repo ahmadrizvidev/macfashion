@@ -15,7 +15,7 @@ import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from
 import { FaTrash, FaPen, FaUpload, FaPlus, FaTimes, FaBars, FaSpinner, FaEye, FaEdit, FaCheck } from "react-icons/fa";
 import { FiDollarSign, FiCalendar, FiPackage, FiShoppingCart, FiCheck } from "react-icons/fi";
 import { motion } from "framer-motion";
-import { db, app } from "../../lib/firebase";
+import { db } from "../../lib/firebase";
 // Import the uploadToCloudinary function
 import { uploadToCloudinary } from "../../lib/cloudinary";
 
