@@ -5,7 +5,7 @@ const nextConfig = {
     domains: ["res.cloudinary.com"], // Allow Cloudinary images
     unoptimized: true, // 👈 needed for static export
   },
-  output: "export", // 👈 enable static export
+
 };
 
 export default nextConfig;
