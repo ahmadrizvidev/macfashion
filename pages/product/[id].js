@@ -154,14 +154,14 @@ export default function ProductDetails() {
 
     let cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-    const productWithVariants = { 
-      ...product, 
-      id, 
+    const productWithVariants = {
+      ...product,
+      id,
       quantity: 1,
       selectedCategory,
       selectedColor
     };
-    
+
     // Check if the product already exists with the same variant
     const existingItemIndex = cart.findIndex(
       (item) => item.id === id && item.selectedColor === selectedColor && item.selectedCategory === selectedCategory
@@ -190,10 +190,10 @@ export default function ProductDetails() {
       setError("Please select a color before proceeding to checkout.");
       return;
     }
-    
-    const productForCheckout = [{ 
-      ...product, 
-      id, 
+
+    const productForCheckout = [{
+      ...product,
+      id,
       quantity: 1,
       selectedCategory,
       selectedColor
@@ -242,224 +242,228 @@ export default function ProductDetails() {
     src.endsWith(".mp4") || (src.startsWith("https://") && src.includes("youtube"));
 
   return (
-    <div className="max-w-7xl mx-auto p-6 md:p-12">
+    <div className="min-h-screen bg-gray-50 pb-16">
       {/* Product Details Section */}
-      <div className="flex flex-col md:flex-row gap-10 bg-white p-8 rounded-xl shadow-lg">
-        {/* Left Media */}
-        <div className="w-full md:w-1/2 flex flex-col gap-6">
-          <div className="w-full h-[500px] relative rounded-lg overflow-hidden shadow-md bg-gray-100 flex items-center justify-center">
-            {isVideo(media[selectedMediaIndex]) ? (
-              <video
-                src={media[selectedMediaIndex]}
-                controls
-                className="w-full h-full object-contain rounded-lg"
-              />
-            ) : (
-              <Image
-                src={media[selectedMediaIndex]}
-                alt={product.title}
-                fill
-                style={{ objectFit: "contain" }}
-                className="rounded-lg"
-                placeholder="blur"
-                blurDataURL="/placeholder.png"
-              />
-            )}
-          </div>
-          {/* Thumbnails */}
-          <div className="flex gap-4 mt-2 overflow-x-auto">
-            {media.map((m, idx) => (
-              <div
-                key={idx}
-                className={`w-24 h-24 border-2 rounded-lg cursor-pointer flex-shrink-0 flex items-center justify-center overflow-hidden transition-colors ${
-                  selectedMediaIndex === idx
-                    ? "border-indigo-600 shadow-md"
-                    : "border-gray-300 hover:border-indigo-400"
-                }`}
-                onClick={() => setSelectedMediaIndex(idx)}
-              >
-                {isVideo(m) ? (
-                  <video src={m} className="w-full h-full object-cover" />
-                ) : (
-                  <Image
-                    src={m}
-                    alt={`Thumbnail ${idx + 1}`}
-                    width={96}
-                    height={96}
-                    style={{ objectFit: "cover" }}
-                    className="rounded"
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Info */}
-        <div className="w-full md:w-1/2 flex flex-col gap-6">
-          <h1 className="text-4xl font-bold text-gray-900">{product.title}</h1>
-          <p className="text-gray-600 text-lg leading-relaxed">{product.description}</p>
-
-          <div className="flex items-center gap-4">
-            {product.oldPrice && (
-              <span className="line-through text-gray-400 text-xl">PKR {product.oldPrice}</span>
-            )}
-            <span className="text-red-600 font-bold text-3xl">PKR {product.price}</span>
+      <div className="bg-white pt-6 pb-12 shadow-sm md:shadow-lg rounded-b-xl">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 flex flex-col md:flex-row gap-10">
+          {/* Left Media */}
+          <div className="w-full md:w-1/2 flex flex-col gap-6">
+            <div className="w-full h-auto min-h-[400px] aspect-video relative rounded-xl overflow-hidden shadow-md bg-gray-100 flex items-center justify-center">
+              {isVideo(media[selectedMediaIndex]) ? (
+                <video
+                  src={media[selectedMediaIndex]}
+                  controls
+                  className="w-full h-full object-contain rounded-xl"
+                />
+              ) : (
+                <Image
+                  src={media[selectedMediaIndex]}
+                  alt={product.title}
+                  fill
+                  style={{ objectFit: "contain" }}
+                  className="rounded-xl"
+                  placeholder="blur"
+                  blurDataURL="/placeholder.png"
+                />
+              )}
+            </div>
+            {/* Thumbnails */}
+            <div className="flex gap-4 mt-2 overflow-x-auto pb-2">
+              {media.map((m, idx) => (
+                <div
+                  key={idx}
+                  className={`w-24 h-24 border-2 rounded-lg cursor-pointer flex-shrink-0 flex items-center justify-center overflow-hidden transition-colors ${
+                    selectedMediaIndex === idx
+                      ? "border-indigo-600 shadow-md"
+                      : "border-gray-300 hover:border-indigo-400"
+                  }`}
+                  onClick={() => setSelectedMediaIndex(idx)}
+                >
+                  {isVideo(m) ? (
+                    <video src={m} className="w-full h-full object-cover" />
+                  ) : (
+                    <Image
+                      src={m}
+                      alt={`Thumbnail ${idx + 1}`}
+                      width={96}
+                      height={96}
+                      style={{ objectFit: "cover" }}
+                      className="rounded"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Countdown Clock */}
-          <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 p-3 rounded-lg font-bold">
-            <FiClock className="w-6 h-6 animate-pulse" />
-            <span className="text-sm">Limited time offer! Ends in</span>
-            <span className="text-lg">
-              {timeLeft.minutes.toString().padStart(2, '0')}:{timeLeft.seconds.toString().padStart(2, '0')}
-            </span>
-          </div>
+          {/* Right Info */}
+          <div className="w-full md:w-1/2 flex flex-col gap-6">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">{product.title}</h1>
+            <p className="text-gray-600 text-base sm:text-lg leading-relaxed">{product.description}</p>
 
-          {/* Limited Stock Badge */}
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 200, damping: 10 }}
-            className="flex items-center gap-2 bg-red-100 text-red-700 p-3 rounded-lg font-bold shadow-sm"
-          >
-            <FiAlertTriangle className="w-5 h-5" />
-            <span className="text-sm">Only a few left! Get yours before they're gone.</span>
-          </motion.div>
+            <div className="flex items-center gap-4">
+              {product.oldPrice && (
+                <span className="line-through text-gray-400 text-xl">PKR {product.oldPrice}</span>
+              )}
+              <span className="text-red-600 font-bold text-3xl">PKR {product.price}</span>
+            </div>
 
-          {/* New Error Message UI */}
-          {error && (
+            {/* Countdown Clock */}
+            <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 p-3 rounded-lg font-bold">
+              <FiClock className="w-6 h-6 animate-pulse" />
+              <span className="text-sm">Limited time offer! Ends in</span>
+              <span className="text-lg">
+                {timeLeft.minutes.toString().padStart(2, '0')}:{timeLeft.seconds.toString().padStart(2, '0')}
+              </span>
+            </div>
+
+            {/* Limited Stock Badge */}
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center gap-3"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 10 }}
+              className="flex items-center gap-2 bg-red-100 text-red-700 p-3 rounded-lg font-bold shadow-sm"
             >
-              <FiAlertTriangle className="w-6 h-6" />
-              <p className="font-medium">{error}</p>
+              <FiAlertTriangle className="w-5 h-5" />
+              <span className="text-sm">Only a few left! Get yours before they're gone.</span>
             </motion.div>
-          )}
 
-          {/* Variant Selection UI */}
-          {uniqueCategories.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <span className="font-semibold text-gray-700">Size:</span>
-              <div className="flex flex-wrap gap-2">
-                {uniqueCategories.map((category) => (
-                  <button
-                    key={category}
-                    className={`px-4 py-2 rounded-lg transition-colors border-2 ${
-                      selectedCategory === category
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300"
-                    }`}
-                    onClick={() => {
-                        setSelectedCategory(category);
-                        setError(null);
-                    }}
-                  >
-                    {category}
-                  </button>
-                ))}
+            {/* New Error Message UI */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md flex items-center gap-3"
+              >
+                <FiAlertTriangle className="w-6 h-6" />
+                <p className="font-medium">{error}</p>
+              </motion.div>
+            )}
+
+            {/* Variant Selection UI */}
+            {uniqueCategories.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="font-semibold text-gray-700">Size:</span>
+                <div className="flex flex-wrap gap-2">
+                  {uniqueCategories.map((category) => (
+                    <button
+                      key={category}
+                      className={`px-4 py-2 rounded-lg transition-colors border-2 ${
+                        selectedCategory === category
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300"
+                      }`}
+                      onClick={() => {
+                          setSelectedCategory(category);
+                          setError(null);
+                      }}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {uniqueColors.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <span className="font-semibold text-gray-700">Color:</span>
-              <div className="flex flex-wrap gap-2">
-                {uniqueColors.map((color) => (
-                  <button
-                    key={color}
-                    className={`w-8 h-8 rounded-full border-2 transition-transform transform hover:scale-110 ${
-                      selectedColor === color
-                        ? "border-indigo-600 shadow-md"
-                        : "border-gray-300"
-                    }`}
-                    style={{ backgroundColor: color.toLowerCase() }}
-                    onClick={() => {
-                        setSelectedColor(color);
-                        setError(null);
-                    }}
-                    aria-label={`Select color ${color}`}
-                  ></button>
-                ))}
+            {uniqueColors.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="font-semibold text-gray-700">Color:</span>
+                <div className="flex flex-wrap gap-2">
+                  {uniqueColors.map((color) => (
+                    <button
+                      key={color}
+                      className={`w-8 h-8 rounded-full border-2 transition-transform transform hover:scale-110 ${
+                        selectedColor === color
+                          ? "border-indigo-600 shadow-md"
+                          : "border-gray-300"
+                      }`}
+                      style={{ backgroundColor: color.toLowerCase() }}
+                      onClick={() => {
+                          setSelectedColor(color);
+                          setError(null);
+                      }}
+                      aria-label={`Select color ${color}`}
+                    ></button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Vertical CTA Buttons */}
-          <div className="flex flex-col gap-4 mt-4">
-            <button
-              className="flex-1 flex items-center justify-center gap-2 bg-black text-white px-8 py-4 rounded-lg hover:bg-gray-800 transition-colors text-lg font-semibold shadow-lg"
-              onClick={handleBuyNow}
-            >
-              <FiCreditCard /> Buy Now
-            </button>
-            <button
-              className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white px-8 py-4 rounded-lg hover:bg-indigo-500 transition-colors text-lg font-semibold shadow-lg"
-              onClick={addToCart}
-            >
-              <FiShoppingCart /> Add to Cart
-            </button>
-            <button
-              className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-8 py-4 rounded-lg hover:bg-green-400 transition-colors text-lg font-semibold shadow-lg"
-              onClick={handleWhatsAppOrder}
-            >
-              <FiMessageSquare /> Order on WhatsApp
-            </button>
+            {/* Vertical CTA Buttons */}
+            <div className="flex flex-col gap-4 mt-4">
+              <button
+                className="flex-1 flex items-center justify-center gap-2 bg-black text-white px-8 py-4 rounded-lg hover:bg-gray-800 transition-colors text-lg font-semibold shadow-lg"
+                onClick={handleBuyNow}
+              >
+                <FiCreditCard /> Buy Now
+              </button>
+              <button
+                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white px-8 py-4 rounded-lg hover:bg-indigo-500 transition-colors text-lg font-semibold shadow-lg"
+                onClick={addToCart}
+              >
+                <FiShoppingCart /> Add to Cart
+              </button>
+              <button
+                className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-8 py-4 rounded-lg hover:bg-green-400 transition-colors text-lg font-semibold shadow-lg"
+                onClick={handleWhatsAppOrder}
+              >
+                <FiMessageSquare /> Order on WhatsApp
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Reviews Section */}
-      <div className="mt-16 bg-white p-8 rounded-xl shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="font-bold text-2xl text-gray-900">
-            Customer Reviews ({reviews.length})
-          </h2>
-          <button
-            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-500 transition-colors font-semibold"
-            onClick={() => setShowReviewPopup(true)}
-          >
-            Add a Review
-          </button>
-        </div>
-        <div className="mt-6 space-y-6">
-          {reviews.length === 0 && (
-            <p className="text-center text-gray-500 py-4">No reviews yet. Be the first to add one!</p>
-          )}
-          {reviews.map((r, idx) => (
-            <div
-              key={idx}
-              className="flex flex-col border border-gray-200 rounded-xl p-6 bg-gray-50 transition-shadow hover:shadow-md"
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8 md:mt-16">
+        <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="font-bold text-2xl text-gray-900">
+              Customer Reviews ({reviews.length})
+            </h2>
+            <button
+              className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-500 transition-colors font-semibold"
+              onClick={() => setShowReviewPopup(true)}
             >
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-lg font-semibold text-gray-900">
-                  {r.name || r.email}
-                </h4>
-                <div className="flex items-center space-x-1">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <svg
-                      key={s}
-                      xmlns="http://www.w3.org/2000/svg"
-                      className={`w-5 h-5 transition-colors ${
-                        s <= r.rating ? "fill-yellow-400" : "fill-gray-300"
-                      }`}
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z" />
-                    </svg>
-                  ))}
+              Add a Review
+            </button>
+          </div>
+          <div className="mt-6 space-y-6">
+            {reviews.length === 0 && (
+              <p className="text-center text-gray-500 py-4">No reviews yet. Be the first to add one!</p>
+            )}
+            {reviews.map((r, idx) => (
+              <div
+                key={idx}
+                className="flex flex-col border border-gray-200 rounded-xl p-6 bg-gray-50 transition-shadow hover:shadow-md"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-lg font-semibold text-gray-900">
+                    {r.name || r.email}
+                  </h4>
+                  <div className="flex items-center space-x-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <svg
+                        key={s}
+                        xmlns="http://www.w3.org/2000/svg"
+                        className={`w-5 h-5 transition-colors ${
+                          s <= r.rating ? "fill-yellow-400" : "fill-gray-300"
+                        }`}
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                    ))}
+                  </div>
                 </div>
+                <p className="text-sm text-gray-600 mb-2">
+                  {new Date(r.date).toLocaleDateString()}
+                </p>
+                <p className="text-gray-700 leading-relaxed">{r.comment}</p>
               </div>
-              <p className="text-sm text-gray-600 mb-2">
-                {new Date(r.date).toLocaleDateString()}
-              </p>
-              <p className="text-gray-700 leading-relaxed">{r.comment}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -513,7 +517,7 @@ export default function ProductDetails() {
 
       {/* Related Products Section */}
       {relatedProducts.length > 0 && (
-        <div className="mt-16">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8 md:mt-16">
           <h2 className="text-3xl font-bold mb-8 text-center text-gray-900">
             You Might Also Like
           </h2>

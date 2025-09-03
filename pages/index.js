@@ -4,6 +4,7 @@ import Carousel from "@/componenets/Hero";
 import Collections from "@/componenets/Collections";
 import SummerTracksuits from "@/componenets/Productshow";
 import HomeCollections from "@/componenets/HomeCollections";
+import NewsLetter from "@/componenets/newsletter";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,6 +23,7 @@ export default function Home() {
       <Collections/>
       <SummerTracksuits/>
       <HomeCollections/>
+      <NewsLetter/>
     </div>
   );
 }

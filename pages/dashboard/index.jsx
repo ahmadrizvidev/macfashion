@@ -11,16 +11,21 @@ import {
   orderBy,
   limit,
 } from "firebase/firestore";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { FaTrash, FaPen, FaUpload, FaPlus, FaTimes, FaBars, FaSpinner, FaEye, FaEdit, FaCheck } from "react-icons/fa";
-import { FiDollarSign, FiCalendar, FiPackage, FiShoppingCart, FiCheck } from "react-icons/fi";
+import { FiDollarSign, FiCalendar, FiPackage, FiShoppingCart, FiUser, FiEdit } from "react-icons/fi";
 import { motion } from "framer-motion";
-import { db, app } from "../../lib/firebase";
-// Import the uploadToCloudinary function
-import { uploadToCloudinary } from "../../lib/cloudinary";
+import { db, storage } from "../../lib/firebase";
 
 // Use the app ID to create a unique path for data
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+// Function to upload files to Firebase Storage
+const uploadToFirebase = async (file) => {
+  const storageRef = ref(storage, `artifacts/${appId}/uploads/${file.name}_${Date.now()}`);
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
+};
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("home");
@@ -34,23 +39,12 @@ export default function Dashboard() {
   const [newStatus, setNewStatus] = useState("");
 
   const initialOrderCountRef = useRef(0);
-  const [orderSubTab, setOrderSubTab] = useState("pending");
-
-  // --- Firebase Auth State ---
-  const [user, setUser] = useState(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
-  const auth = getAuth(app);
+  const [orderSubTab, setOrderSubTab] = useState("pending"); // New state for sub-tabs
 
   const [stats, setStats] = useState({
     totalRevenue: 0,
     thisMonthRevenue: 0,
     lastMonthRevenue: 0,
-    totalOrders: 0,
-    pendingOrders: 0,
-    completedOrders: 0,
-    ordersThisWeek: 0,
   });
 
   const [newProduct, setNewProduct] = useState({
@@ -63,80 +57,6 @@ export default function Dashboard() {
 
   const [images, setImages] = useState([]);
   const [video, setVideo] = useState(null);
-
-  // --- Firebase Authentication Effect ---
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      // Only set user if they match the admin email
-      if (currentUser && currentUser.email === "reside452@gmail.com") {
-        setUser(currentUser);
-      } else {
-        setUser(null); // Ensure no other user can access
-        if (currentUser) {
-          signOut(auth); // Log out unauthorized users
-        }
-      }
-    });
-    return () => unsubscribe();
-  }, [auth]);
-
-  // --- Data Fetching Effect ---
-  useEffect(() => {
-    if (user) {
-      fetchProducts();
-      fetchOrders();
-    }
-  }, [user]);
-
-  // --- Auth Handlers ---
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setLoginError("");
-
-    try {
-      // Sign in the user with the provided email and password
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-
-      // Check if the signed-in user is the designated admin
-      if (userCredential.user.email === "reside452@gmail.com") {
-        setUser(userCredential.user);
-      } else {
-        // If not the admin, sign them out immediately
-        await signOut(auth);
-        setLoginError("This account is not authorized to access the dashboard.");
-      }
-    } catch (error) {
-      setLoginError("Invalid email or password. Please try again.");
-      console.error("Login failed:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      setUser(null);
-      // Reset state on logout
-      setOrders([]);
-      setProducts([]);
-      setStats({
-        totalRevenue: 0,
-        thisMonthRevenue: 0,
-        lastMonthRevenue: 0,
-        totalOrders: 0,
-        pendingOrders: 0,
-        completedOrders: 0,
-        ordersThisWeek: 0,
-      });
-      setActiveTab("home");
-      setNewOrdersCount(0);
-      initialOrderCountRef.current = 0;
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
 
   // --- Fetch products and orders ---
   const fetchProducts = async () => {
@@ -199,7 +119,6 @@ export default function Dashboard() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     const totalRevenue = allOrders.reduce((acc, order) => acc + order.totalAmount, 0);
 
@@ -220,23 +139,17 @@ export default function Dashboard() {
       return acc;
     }, 0);
 
-    const pendingOrders = allOrders.filter(o => ["Pending", "Processing", "Ready for Packed", "Ready for Shipping"].includes(o.status)).length;
-    const completedOrders = allOrders.filter(o => ["Shipped", "Cancelled"].includes(o.status)).length;
-    const ordersThisWeek = allOrders.filter(o => {
-      const orderDate = o.createdAt?.toDate();
-      return orderDate && orderDate >= oneWeekAgo;
-    }).length;
-
     setStats({
       totalRevenue,
       thisMonthRevenue,
       lastMonthRevenue,
-      totalOrders: allOrders.length,
-      pendingOrders,
-      completedOrders,
-      ordersThisWeek,
     });
   };
+
+  useEffect(() => {
+    fetchProducts();
+    fetchOrders();
+  }, []);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -298,15 +211,14 @@ export default function Dashboard() {
     }
     setLoading(true);
     try {
-      // Cloudinary upload: Await promises for all image and video uploads
-      const uploadedImages = await Promise.all(images.map((img) => uploadToCloudinary(img.file)));
-      const uploadedVideo = video ? await uploadToCloudinary(video.file) : null;
+      const uploadedImages = await Promise.all(images.map((img) => uploadToFirebase(img.file)));
+      const uploadedVideo = video ? await uploadToFirebase(video.file) : null;
 
       const productsCollectionRef = collection(db, 'products');
       await addDoc(productsCollectionRef, {
         ...newProduct,
-        images: uploadedImages, // Use Cloudinary URLs
-        video: uploadedVideo, // Use Cloudinary URL
+        images: uploadedImages,
+        video: uploadedVideo,
         createdAt: serverTimestamp(),
       });
       alert("Product added successfully!");
@@ -339,15 +251,13 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const newImagesToUpload = images.filter((img) => img.isNew);
-      // Cloudinary upload for new images
-      const uploadedNewImages = await Promise.all(newImagesToUpload.map((img) => uploadToCloudinary(img.file)));
+      const uploadedNewImages = await Promise.all(newImagesToUpload.map((img) => uploadToFirebase(img.file)));
       const existingImages = images.filter((img) => !img.isNew).map((img) => img.url);
       const finalImages = [...existingImages, ...uploadedNewImages];
 
       let finalVideoUrl = video?.url || null;
-      // Cloudinary upload for new video
       if (video?.isNew) {
-        finalVideoUrl = await uploadToCloudinary(video.file);
+        finalVideoUrl = await uploadToFirebase(video.file);
       }
 
       const productDocRef = doc(db, 'products', editingProduct.id);
@@ -425,53 +335,6 @@ export default function Dashboard() {
   const pendingOrders = orders.filter(o => ["Pending", "Processing", "Ready for Packed", "Ready for Shipping"].includes(o.status));
   const completedOrders = orders.filter(o => ["Shipped", "Cancelled"].includes(o.status));
 
-  // --- Conditional Rendering for Login vs Dashboard ---
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <motion.div
-          className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-6">Admin Login 🔒</h2>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <input
-                type="email"
-                placeholder="Admin Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-colors"
-                required
-              />
-            </div>
-            <div>
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-colors"
-                required
-              />
-            </div>
-            {loginError && <p className="text-red-500 text-sm text-center">{loginError}</p>}
-            <button
-              type="submit"
-              className={`w-full text-white py-3 rounded-lg font-bold text-lg transition-colors ${loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
-              disabled={loading}
-            >
-              {loading ? <FaSpinner className="animate-spin inline-block" /> : "Log In"}
-            </button>
-          </form>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // --- Main Dashboard Layout ---
   return (
     <div className="flex min-h-screen font-sans bg-gray-50 text-gray-800">
       {/* Sidebar */}
@@ -536,14 +399,6 @@ export default function Dashboard() {
             )}
           </button>
         </nav>
-        <div className="mt-auto">
-          <button
-            onClick={handleLogout}
-            className="w-full text-center py-3 px-4 rounded-lg font-bold text-red-100 bg-red-600 hover:bg-red-700 transition-colors"
-          >
-            Log Out
-          </button>
-        </div>
       </aside>
 
       {/* Main content */}
@@ -607,46 +462,8 @@ export default function Dashboard() {
               >
                 <FiShoppingCart className="text-5xl text-indigo-500 mb-2" />
                 <p className="text-gray-500 font-semibold mb-1">Total Orders</p>
-                <p className="text-3xl font-bold text-indigo-600">{stats.totalOrders}</p>
+                <p className="text-3xl font-bold text-indigo-600">{orders.length}</p>
               </motion.div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Orders This Week Card */}
-                <motion.div
-                    className="bg-white p-6 rounded-xl shadow-lg flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                >
-                    <FiCalendar className="text-5xl text-yellow-500 mb-2" />
-                    <p className="text-gray-500 font-semibold mb-1">Orders This Week</p>
-                    <p className="text-3xl font-bold text-yellow-600">{stats.ordersThisWeek}</p>
-                </motion.div>
-
-                {/* Pending Orders Card */}
-                <motion.div
-                    className="bg-white p-6 rounded-xl shadow-lg flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                >
-                    <FiPackage className="text-5xl text-orange-500 mb-2" />
-                    <p className="text-gray-500 font-semibold mb-1">Pending Orders</p>
-                    <p className="text-3xl font-bold text-orange-600">{stats.pendingOrders}</p>
-                </motion.div>
-
-                {/* Completed Orders Card */}
-                <motion.div
-                    className="bg-white p-6 rounded-xl shadow-lg flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.7 }}
-                >
-                    <FiCheck className="text-5xl text-teal-500 mb-2" />
-                    <p className="text-gray-500 font-semibold mb-1">Completed Orders</p>
-                    <p className="text-3xl font-bold text-teal-600">{stats.completedOrders}</p>
-                </motion.div>
             </div>
           </div>
         )}
@@ -808,6 +625,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        ---
 
         {/* Manage Products Tab */}
         {activeTab === "manage" && (
@@ -835,18 +653,22 @@ export default function Dashboard() {
                       />
                     )}
                     <h3 className="font-bold text-lg text-gray-900">{p.title}</h3>
-                    <p className="text-sm text-gray-600">PKR {p.price}</p>
-                    <p className="text-sm text-gray-500 mb-4">{p.collection}</p>
-                    <div className="mt-auto flex justify-between gap-2">
+                    <p className="text-red-600 font-extrabold text-xl mt-1">
+                      PKR {p.price}
+                    </p>
+                    <p className="text-gray-500 text-sm mt-1">{p.collection}</p>
+                    <div className="flex gap-2 mt-4">
                       <button
+                        className={`flex-1 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2 ${loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
                         onClick={() => editProduct(p)}
-                        className="flex-1 bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center justify-center gap-2 text-sm"
+                        disabled={loading}
                       >
                         <FaPen /> Edit
                       </button>
                       <button
+                        className={`flex-1 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2 ${loading ? "bg-red-300 cursor-not-allowed" : "bg-red-500 hover:bg-red-600"}`}
                         onClick={() => deleteProduct(p.id)}
-                        className="flex-1 bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 transition-colors duration-200 flex items-center justify-center gap-2 text-sm"
+                        disabled={loading}
                       >
                         <FaTrash /> Delete
                       </button>
@@ -863,135 +685,294 @@ export default function Dashboard() {
         {/* Orders Tab */}
         {activeTab === "orders" && (
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Orders</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">Recent Orders</h2>
 
-            <div className="flex space-x-4 mb-6">
+            {/* New Sub-Tabs */}
+            <div className="flex border-b border-gray-200 mb-6">
               <button
-                className={`py-2 px-6 rounded-full font-medium transition-colors ${
+                className={`py-2 px-4 font-semibold text-lg transition-colors duration-200 ${
                   orderSubTab === "pending"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                    ? "text-indigo-600 border-b-2 border-indigo-600"
+                    : "text-gray-500 hover:text-indigo-600"
                 }`}
                 onClick={() => setOrderSubTab("pending")}
               >
-                Pending ({pendingOrders.length})
+                Pending Orders
               </button>
               <button
-                className={`py-2 px-6 rounded-full font-medium transition-colors ${
+                className={`py-2 px-4 font-semibold text-lg transition-colors duration-200 ${
                   orderSubTab === "completed"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                    ? "text-indigo-600 border-b-2 border-indigo-600"
+                    : "text-gray-500 hover:text-indigo-600"
                 }`}
                 onClick={() => setOrderSubTab("completed")}
               >
-                Completed ({completedOrders.length})
+                Completed Orders
               </button>
             </div>
 
-            <div className="overflow-x-auto bg-white rounded-xl shadow-xl">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                    <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Customer Name</th>
-                    <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                    <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {(orderSubTab === "pending" ? pendingOrders : completedOrders).map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.id.slice(0, 8)}...</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{order.customerDetails?.name || "N/A"}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">PKR {order.totalAmount.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={getStatusBadge(order.status)}>{order.status}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => setSelectedOrder(order)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-4"
+            {loading ? (
+              <div className="flex justify-center items-center h-48">
+                <FaSpinner className="animate-spin text-4xl text-indigo-600" />
+                <span className="ml-4 text-xl font-semibold text-indigo-600">Loading Orders...</span>
+              </div>
+            ) : (
+              <>
+                {/* Display based on sub-tab selection */}
+                {orderSubTab === "pending" && (
+                  <>
+                    {/* Desktop View (Table) */}
+                    <div className="hidden lg:block bg-white rounded-2xl shadow-xl overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking ID</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {pendingOrders.map((o) => (
+                            <tr key={o.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedOrder(o)}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{o.id.substring(0, 8)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{o.customerDetails?.fullName}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{o.createdAt?.toDate().toLocaleDateString()}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{o.trackingId || "N/A"}</td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={getStatusBadge(o.status)}>{o.status}</span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">PKR {o.totalAmount.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedOrder(o); }}
+                                  className="text-indigo-600 hover:text-indigo-900 transition-colors"
+                                  title="View Details"
+                                >
+                                  <FaEye />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile View (Cards) */}
+                    <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {pendingOrders.map((o) => (
+                        <div
+                          key={o.id}
+                          className="bg-white p-5 rounded-2xl shadow-lg border border-gray-200 cursor-pointer transition-transform duration-300 hover:scale-105 hover:shadow-xl"
+                          onClick={() => setSelectedOrder(o)}
                         >
-                          <FaEye className="inline-block mr-1" /> View
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-bold text-lg truncate text-indigo-700">{o.customerDetails?.fullName}</h3>
+                            <span className={getStatusBadge(o.status)}>{o.status}</span>
+                          </div>
+                          <p className="text-sm text-gray-500 mb-1">
+                            Order ID: <span className="font-medium text-gray-800">{o.id.substring(0, 8)}</span>
+                          </p>
+                          <p className="text-sm text-gray-500 mb-1">
+                            Tracking ID: <span className="font-medium text-gray-800">{o.trackingId || "N/A"}</span>
+                          </p>
+                          <p className="text-lg font-bold text-green-600 mt-2">
+                            Total: PKR {o.totalAmount.toFixed(2)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {orderSubTab === "completed" && (
+                  <>
+                    {/* Desktop View (Table) */}
+                    <div className="hidden lg:block bg-white rounded-2xl shadow-xl overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking ID</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {completedOrders.map((o) => (
+                            <tr key={o.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedOrder(o)}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{o.id.substring(0, 8)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{o.customerDetails?.fullName}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{o.createdAt?.toDate().toLocaleDateString()}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{o.trackingId || "N/A"}</td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={getStatusBadge(o.status)}>{o.status}</span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">PKR {o.totalAmount.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedOrder(o); }}
+                                  className="text-indigo-600 hover:text-indigo-900 transition-colors"
+                                  title="View Details"
+                                >
+                                  <FaEye />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile View (Cards) */}
+                    <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {completedOrders.map((o) => (
+                        <div
+                          key={o.id}
+                          className="bg-white p-5 rounded-2xl shadow-lg border border-gray-200 cursor-pointer transition-transform duration-300 hover:scale-105 hover:shadow-xl"
+                          onClick={() => setSelectedOrder(o)}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-bold text-lg truncate text-indigo-700">{o.customerDetails?.fullName}</h3>
+                            <span className={getStatusBadge(o.status)}>{o.status}</span>
+                          </div>
+                          <p className="text-sm text-gray-500 mb-1">
+                            Order ID: <span className="font-medium text-gray-800">{o.id.substring(0, 8)}</span>
+                          </p>
+                          <p className="text-sm text-gray-500 mb-1">
+                            Tracking ID: <span className="font-medium text-gray-800">{o.trackingId || "N/A"}</span>
+                          </p>
+                          <p className="text-lg font-bold text-green-600 mt-2">
+                            Total: PKR {o.totalAmount.toFixed(2)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
           </div>
         )}
 
         {/* Order Details Modal */}
         {selectedOrder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900 bg-opacity-75">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 sm:p-8 space-y-6">
-              <div className="flex justify-between items-center border-b pb-4">
-                <h3 className="text-2xl font-bold text-gray-900">Order #{selectedOrder.id.slice(0, 8)}</h3>
-                <button onClick={() => setSelectedOrder(null)} className="text-gray-500 hover:text-gray-900 transition-colors">
-                  <FaTimes size={24} />
-                </button>
-              </div>
+          <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <motion.div
+              className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg relative overflow-y-auto max-h-[90vh]"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+            >
+              <button
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition-colors"
+                onClick={() => setSelectedOrder(null)}
+              >
+                <FaTimes size={24} />
+              </button>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-lg text-gray-700 mb-2">Customer Details</h4>
-                  <p><strong>Name:</strong> {selectedOrder.customerDetails?.name}</p>
-                  <p><strong>Email:</strong> {selectedOrder.customerDetails?.email}</p>
-                  <p><strong>Phone:</strong> {selectedOrder.customerDetails?.phone}</p>
-                  <p><strong>Address:</strong> {selectedOrder.customerDetails?.address}</p>
+              <h3 className="text-3xl font-bold text-gray-900 mb-6">Order Details</h3>
+
+              <div className="space-y-6">
+                {/* Customer Information Section */}
+                <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                  <h4 className="text-xl font-bold text-indigo-800 mb-3 flex items-center gap-2">
+                    <FiUser className="text-indigo-600" /> Customer Information
+                  </h4>
+                  <div className="space-y-2 text-sm text-gray-700">
+                    <p><strong>Name:</strong> {selectedOrder.customerDetails?.fullName}</p>
+                    <p><strong>WhatsApp:</strong> {selectedOrder.customerDetails?.whatsappNumber}</p>
+                    <p><strong>Email:</strong> {selectedOrder.customerDetails?.email}</p>
+                    <p><strong>Phone:</strong> {selectedOrder.customerDetails?.phoneNumber}</p>
+                    <p><strong>Address:</strong> {selectedOrder.customerDetails?.address}, {selectedOrder.customerDetails?.city}, {selectedOrder.customerDetails?.province}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-lg text-gray-700 mb-2">Order Summary</h4>
-                  <p><strong>Total:</strong> PKR {selectedOrder.totalAmount.toFixed(2)}</p>
-                  <p><strong>Status:</strong> <span className={getStatusBadge(selectedOrder.status)}>{selectedOrder.status}</span></p>
-                  <p><strong>Ordered:</strong> {selectedOrder.createdAt?.toDate().toLocaleString()}</p>
+
+                {/* Order Summary Section */}
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <FiPackage className="text-gray-600" /> Order Summary
+                  </h4>
+                  <div className="space-y-2 text-sm text-gray-700">
+                    <p><strong>Order ID:</strong> {selectedOrder.id}</p>
+                    <p><strong>Tracking ID:</strong> {selectedOrder.trackingId || "N/A"}</p>
+                    <p><strong>Status:</strong> <span className={getStatusBadge(selectedOrder.status)}>{selectedOrder.status}</span></p>
+                    <p><strong>Total:</strong> PKR {selectedOrder.totalAmount?.toFixed(2)}</p>
+                  </div>
+                </div>
+
+                {/* Products Section */}
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 className="text-xl font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <FiShoppingCart className="text-gray-600" /> Products
+                  </h4>
+                  <ul className="space-y-4">
+                    {selectedOrder.products?.map((item, index) => (
+                      <li key={index} className="flex items-center gap-4">
+                        <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden relative">
+                          <img
+                            src={item.images?.[0] || "/placeholder.png"}
+                            alt={item.title}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-gray-900">{item.title}</h5>
+                          <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                          <p className="text-sm font-semibold text-indigo-600">PKR {item.price}</p>
+                          {/* Display Variants */}
+                          {(item.selectedCategory || item.selectedColor) && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {item.selectedCategory && <span>Size: {item.selectedCategory}</span>}
+                              {item.selectedCategory && item.selectedColor && <span>, </span>}
+                              {item.selectedColor && <span>Color: {item.selectedColor}</span>}
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Status Update Form */}
+                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <h4 className="text-xl font-bold text-yellow-800 mb-3 flex items-center gap-2">
+                    <FiEdit className="text-yellow-600" /> Update Status
+                  </h4>
+                  <select
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors mb-4"
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Processing">Processing</option>
+                    <option value="Ready for Packed">Ready for Packed</option>
+                    <option value="Ready for Shipping">Ready for Shipping</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                  <button
+                    onClick={() => updateOrderStatus(selectedOrder.id, newStatus)}
+                    className={`w-full text-white px-6 py-3 rounded-lg font-bold text-lg transition-colors duration-200 transform hover:scale-105 ${loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <FaSpinner className="animate-spin mr-2 inline-block" />
+                        Updating...
+                      </>
+                    ) : (
+                      <><FaCheck /> Confirm Status</>
+                    )}
+                  </button>
                 </div>
               </div>
-
-              <div>
-                <h4 className="font-semibold text-lg text-gray-700 mb-2">Items</h4>
-                <ul className="space-y-4">
-                  {selectedOrder.items?.map((item, index) => (
-                    <li key={index} className="flex items-center space-x-4 bg-gray-50 p-3 rounded-lg">
-                      <img src={item.image} alt={item.title} className="w-16 h-16 object-cover rounded-lg" />
-                      <div>
-                        <p className="font-medium text-gray-800">{item.title}</p>
-                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                        <p className="text-sm text-gray-600">Price: PKR {item.price.toFixed(2)}</p>
-                        {item.size && <p className="text-xs text-gray-500">Size: {item.size}</p>}
-                        {item.color && <p className="text-xs text-gray-500">Color: {item.color}</p>}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-semibold text-lg text-gray-700">Update Status</h4>
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-colors"
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Processing">Processing</option>
-                  <option value="Ready for Packed">Ready for Packed</option>
-                  <option value="Ready for Shipping">Ready for Shipping</option>
-                  <option value="Shipped">Shipped</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-                <button
-                  onClick={() => updateOrderStatus(selectedOrder.id, newStatus)}
-                  className={`w-full text-white py-3 rounded-lg font-bold text-lg transition-colors ${loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
-                  disabled={loading}
-                >
-                  {loading ? <FaSpinner className="animate-spin inline-block" /> : "Save Status"}
-                </button>
-              </div>
-            </div>
+            </motion.div>
           </div>
         )}
       </main>

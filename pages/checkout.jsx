@@ -1,5 +1,3 @@
-// pages/checkout.js
-
 "use client";
 
 import { useState, useEffect, useCallback, memo } from "react";
@@ -99,7 +97,7 @@ export default function Checkout() {
         }
 
         setCartItems(items);
-        
+
         // IMPORTANT: The cleanup of localStorage is now handled in handleSubmit.
         // This useEffect hook is just for fetching the items.
     }, []);
@@ -180,7 +178,7 @@ export default function Checkout() {
 
     if (orderPlaced) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50">
+            <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50 w-full overflow-hidden">
                 <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -237,7 +235,7 @@ export default function Checkout() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto p-6 md:p-12 min-h-screen">
+        <div className="w-full overflow-x-hidden p-6 md:p-12 min-h-screen w-[100vw]">
             <h1 className="text-4xl font-extrabold mb-10 text-center text-gray-900 tracking-tight">
                 Checkout
             </h1>
