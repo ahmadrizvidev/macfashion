@@ -872,7 +872,7 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                {/* Order Details Modal */}
+            {/* Order Details Modal */}
                 {selectedOrder && (
                     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
                         <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 space-y-6 transform transition-all scale-100 opacity-100">
@@ -892,26 +892,25 @@ export default function Dashboard() {
                                 <p className="text-lg font-semibold">Total Amount: <span className="font-normal text-green-600">PKR {selectedOrder.totalAmount.toFixed(2)}</span></p>
                                 <p className="text-lg font-semibold">Current Status: <span className={getStatusBadge(selectedOrder.status)}>{selectedOrder.status}</span></p>
                             </div>
-
-                            <div className="mt-6">
-                                <h4 className="text-xl font-bold text-gray-900 mb-4">Ordered Items</h4>
-                                <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
-                                    {selectedOrder.items?.map((item, index) => (
-                                        <div key={index} className="flex items-center gap-4 bg-gray-100 p-4 rounded-lg">
-                                            {item.images?.[0] && (
-                                                <img src={item.images[0]} alt={item.name} className="w-16 h-16 object-cover rounded" />
-                                            )}
-                                            <div className="flex-1">
-                                                <p className="font-semibold text-gray-800">{item.name}</p>
-                                                <p className="text-sm text-gray-600">Price: PKR {item.price}</p>
-                                                <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                                                {item.size && <p className="text-sm text-gray-600">Size: {item.size}</p>}
-                                                {item.color && <p className="text-sm text-gray-600">Color: {item.color}</p>}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+<div className="mt-6">
+    <h4 className="text-xl font-bold text-gray-900 mb-4">Ordered Items</h4>
+    <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+        {selectedOrder.products?.map((item, index) => (
+            <div key={index} className="flex items-center gap-4 bg-gray-100 p-4 rounded-lg">
+                {item.images?.[0] && (
+                    <img src={item.images[0]} alt={item.title} className="w-16 h-16 object-cover rounded" />
+                )}
+                <div className="flex-1">
+                    <p className="font-semibold text-gray-800">{item.title}</p>
+                    <p className="text-sm text-gray-600">Price: PKR {item.price}</p>
+                    <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                    {item.selectedCategory && <p className="text-sm text-gray-600">Size: {item.selectedCategory}</p>}
+                    {item.selectedColor && <p className="text-sm text-gray-600">Color: {item.selectedColor}</p>}
+                </div>
+            </div>
+        ))}
+    </div>
+</div>
 
                             <div className="mt-6 flex flex-col sm:flex-row gap-4">
                                 <select
@@ -947,4 +946,5 @@ export default function Dashboard() {
             </main>
         </div>
     );
+ 
 }
