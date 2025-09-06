@@ -81,7 +81,7 @@ export default function Dashboard() {
     const [images, setImages] = useState([]);
     const [video, setVideo] = useState(null);
 
-    // --- Fetch products and orders ---
+    //  Fetch products and orders 
     const fetchProducts = async () => {
         try {
             setLoading(true);
@@ -189,7 +189,7 @@ export default function Dashboard() {
         }
     };
 
-    // --- Media Handlers (Updated for Cloudinary) ---
+    //  Media Handlers (Updated for Cloudinary) 
     const handleImageUpload = (e) => {
         const files = Array.from(e.target.files);
         const previews = files.map((file) => ({
@@ -213,7 +213,7 @@ export default function Dashboard() {
         setVideo(null);
     };
 
-    // --- Product CRUD Operations ---
+    //  Product CRUD Operations 
     const resetForm = () => {
         setEditingProduct(null);
         setNewProduct({
@@ -333,7 +333,7 @@ export default function Dashboard() {
         }
     };
 
-    // --- Variant Handlers ---
+    //  Variant Handlers 
     const addVariant = () => {
         setNewProduct((prev) => ({
             ...prev,
@@ -388,7 +388,7 @@ export default function Dashboard() {
                 >
                     <FaTimes />
                 </button>
-                <h1 className="text-3xl font-extrabold mb-12 text-center text-indigo-100">
+                <h1 className="text-3xl font-extrabold mb-12 text-center text-indigo-100 mt-5">
                     Admin Panel
                 </h1>
                 <nav className="flex flex-col gap-3 flex-1">
@@ -503,7 +503,7 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                ---
+                
 
                 {/* Add/Edit Product Tab */}
                 {activeTab === "products" && (
@@ -670,7 +670,7 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                ---
+                
 
                 {/* Manage Products Tab */}
                 {activeTab === "manage" && (
@@ -725,7 +725,7 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                ---
+                
 
                 {/* Orders Tab */}
                 {activeTab === "orders" && (
