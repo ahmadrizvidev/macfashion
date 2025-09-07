@@ -45,7 +45,7 @@ const FormField = memo(({ label, type, name, value, onChange, placeholder, requi
                     onChange={onChange}
                     required={required}
                     rows="3"
-                    className="mt-1 block w-full pl-10 pr-4 py-2 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-200 ease-in-out"
+                    className="mt-1 block w-full pl-10 pr-4 py-2 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-200 ease-in-out text-black"
                 />
             ) : (
                 <input
@@ -55,7 +55,7 @@ const FormField = memo(({ label, type, name, value, onChange, placeholder, requi
                     value={value}
                     onChange={onChange}
                     required={required}
-                    className="mt-1 block w-full pl-10 pr-4 py-2 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-200 ease-in-out"
+                    className="mt-1 block w-full pl-10 pr-4 py-2 rounded-lg border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all duration-200 ease-in-out text-black"
                 />
             )}
         </div>
@@ -84,25 +84,18 @@ export default function Checkout() {
     const [isBuyNow, setIsBuyNow] = useState(false);
 
     useEffect(() => {
-        // Attempt to retrieve "Buy Now" items first
         let items = JSON.parse(localStorage.getItem("checkoutItems") || "[]");
 
-        // If "Buy Now" items are found, set the flag
         if (items.length > 0) {
             setIsBuyNow(true);
         } else {
-            // If not, get items from the regular cart
             items = JSON.parse(localStorage.getItem("cart") || "[]");
             setIsBuyNow(false);
         }
 
         setCartItems(items);
-
-        // IMPORTANT: The cleanup of localStorage is now handled in handleSubmit.
-        // This useEffect hook is just for fetching the items.
     }, []);
 
-    // Calculate subtotal, shipping, and total in PKR
     const subtotalPKR = cartItems.reduce(
         (acc, item) => acc + item.quantity * parseFloat(item.price),
         0
@@ -110,7 +103,6 @@ export default function Checkout() {
     const shippingFee = subtotalPKR >= 3000000 ? 0 : 270;
     const finalTotalPKR = subtotalPKR + shippingFee;
 
-    // Memoize the handleChange function
     const handleChange = useCallback((e) => {
         setFormData(prevFormData => ({
             ...prevFormData,
@@ -159,7 +151,6 @@ export default function Checkout() {
             const ordersCollection = collection(db, `artifacts/${appId}/public/data/orders`);
             await addDoc(ordersCollection, orderData);
 
-            // Correctly clear the specific storage item that was used
             if (isBuyNow) {
                 localStorage.removeItem("checkoutItems");
             } else {
@@ -240,7 +231,6 @@ export default function Checkout() {
                 Checkout
             </h1>
             <div className="flex flex-col md:flex-row gap-8 bg-white p-8 rounded-2xl shadow-xl">
-                {/* Left: Shipping Form */}
                 <div className="w-full md:w-1/2">
                     <h2 className="text-2xl font-bold mb-6 text-gray-900 flex items-center gap-3">
                         <FiCreditCard className="text-indigo-600" /> Shipping & Payment
@@ -348,7 +338,6 @@ export default function Checkout() {
                     </form>
                 </div>
 
-                {/* Right: Order Summary */}
                 <div className="w-full md:w-1/2 md:order-last">
                     <h2 className="text-2xl font-bold mb-6 text-gray-900 flex items-center gap-3">
                         <FiPackage className="text-indigo-600" /> Order Summary

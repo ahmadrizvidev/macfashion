@@ -154,12 +154,13 @@ export default function Header() {
             </div>
           </Link>
 
-          <button
-            onClick={toggleMenu}
-            className="lg:hidden ml-4 p-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
-          >
-            ☰
-          </button>
+        <button
+  onClick={toggleMenu}
+  className="lg:hidden ml-4 p-2 rounded-md duration-200 text-white bg-black"
+>
+  ☰
+</button>
+
         </div>
       </div>
 
@@ -192,7 +193,7 @@ export default function Header() {
               <Link href="/" onClick={toggleMenu}>
                 <Image src="/assets/logo.jpg" alt="logo" width={50} height={40} />
               </Link>
-              <button onClick={toggleMenu} className="text-gray-500 hover:text-gray-700">
+              <button onClick={toggleMenu} className="text-black-500 hover:text-gray-700">
                 ✕
               </button>
             </div>
