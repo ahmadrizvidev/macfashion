@@ -548,7 +548,7 @@ export default function Dashboard() {
                             <option value="Mens">Mens</option>
                             <option value="Mens Summer Collection">Mens Summer Collection</option>
                             <option value="Mens Winter Collection">Mens Winter Collection</option>
-                            <option value="Womens ">Womens Collection</option>
+                            <option value="Womens">Womens Collection</option>
                             <option value="Womens Summer Collection">Womens Summer Collection</option>
                             <option value="Womens Winter Collection">Womens Winter Collection</option>
                             <option value="Kids Collection">Kids Collection</option>
