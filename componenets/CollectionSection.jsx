@@ -1,4 +1,3 @@
-// components/CollectionSection.js
 "use client";
 
 import Link from "next/link";
@@ -11,6 +10,7 @@ export default function CollectionSection({ title, products, link }) {
 
   return (
     <section className="py-12 bg-gray-50">
+      {/* Header */}
       <div className="flex justify-between items-center px-6 md:px-12">
         <h2 className="text-2xl md:text-3xl font-bold tracking-wide">{title}</h2>
         <Link
@@ -21,7 +21,8 @@ export default function CollectionSection({ title, products, link }) {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 px-6 md:px-12 mt-8">
+      {/* Product Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 px-6 md:px-12 mt-8">
         {products.map((product) => (
           <motion.div
             key={product.id}
@@ -30,24 +31,24 @@ export default function CollectionSection({ title, products, link }) {
           >
             <Link href={`/product/${product.id}`} className="flex flex-col flex-1">
               {/* Image */}
-              <div className="relative w-full h-80 sm:h-96 md:h-80 rounded-t-xl overflow-hidden flex-shrink-0">
+              <div className="relative w-full aspect-[3/4] rounded-t-xl overflow-hidden flex-shrink-0">
                 <Image
                   src={product.images?.[0] || "/placeholder.png"}
                   alt={product.title}
                   fill
-                  className="object-scale-down"
+                  className="object-cover"
                   placeholder="blur"
                   blurDataURL="/placeholder.png"
                   sizes="(max-width: 768px) 100vw,
                          (max-width: 1200px) 50vw,
-                         25vw"
+                         33vw"
                 />
               </div>
 
-              {/* Product info */}
+              {/* Product Info */}
               <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-base md:text-lg font-semibold text-gray-800">
+                  <h3 className="text-base md:text-lg font-semibold text-gray-800 line-clamp-2">
                     {product.title}
                   </h3>
                   {product.reviews && (
@@ -62,7 +63,9 @@ export default function CollectionSection({ title, products, link }) {
                       {product.oldPrice}
                     </span>
                   )}
-                  <span className="text-red-600 font-bold text-lg">{product.price}</span>
+                  <span className="text-red-600 font-bold text-lg">
+                    {product.price}
+                  </span>
                 </div>
               </div>
             </Link>

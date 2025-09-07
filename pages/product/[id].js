@@ -366,29 +366,30 @@ export default function ProductDetails() {
               </div>
             )}
 
-            {uniqueColors.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <span className="font-semibold text-gray-700">Color:</span>
-                <div className="flex flex-wrap gap-2">
-                  {uniqueColors.map((color) => (
-                    <button
-                      key={color}
-                      className={`w-8 h-8 rounded-full border-2 transition-transform transform hover:scale-110 ${
-                        selectedColor === color
-                          ? "border-indigo-600 shadow-md"
-                          : "border-gray-300"
-                      }`}
-                      style={{ backgroundColor: color.toLowerCase() }}
-                      onClick={() => {
-                          setSelectedColor(color);
-                          setError(null);
-                      }}
-                      aria-label={`Select color ${color}`}
-                    ></button>
-                  ))}
-                </div>
-              </div>
-            )}
+       {uniqueColors.length > 0 && (
+  <div className="flex flex-col gap-2">
+    <span className="font-semibold text-gray-700">Color:</span>
+    <div className="flex flex-wrap gap-2">
+      {uniqueColors.map((color) => (
+        <button
+          key={color}
+          className={`px-4 py-2 rounded-lg transition-colors border-2 ${
+            selectedColor === color
+              ? "bg-indigo-600 text-white border-indigo-600"
+              : "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300"
+          }`}
+          onClick={() => {
+            setSelectedColor(color);
+            setError(null);
+          }}
+        >
+          {color}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
+
 
             {/* Vertical CTA Buttons */}
             <div className="flex flex-col gap-4 mt-4">

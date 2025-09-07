@@ -13,7 +13,7 @@ const collections = [
   {
     title: "Womens",
     image: "/assets/women.jpg",
-    href: "/collections/women",
+    href: "/collections/womens-winter-collection",
   },
   {
     title: "Kids",

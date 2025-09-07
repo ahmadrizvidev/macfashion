@@ -107,7 +107,7 @@ export default function Checkout() {
         (acc, item) => acc + item.quantity * parseFloat(item.price),
         0
     );
-    const shippingFee = subtotalPKR >= 3000 ? 0 : 400;
+    const shippingFee = subtotalPKR >= 3000000 ? 0 : 270;
     const finalTotalPKR = subtotalPKR + shippingFee;
 
     // Memoize the handleChange function

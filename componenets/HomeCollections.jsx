@@ -17,9 +17,15 @@ export default function HomeCollections() {
         const snapshot = await getDocs(colRef);
         const allProducts = snapshot.docs.map((doc) => doc.data());
 
-        // Get unique collection names
+        // Normalize and filter only Mens + Womens
+        const allowedCollections = ["Mens", "Womens"];
+        const normalizedCollections = allProducts
+          .map((p) => p.collection?.trim().toLowerCase()) // normalize
+          .filter((c) => allowedCollections.map((x) => x.toLowerCase()).includes(c));
+
+        // Deduplicate
         const uniqueCollections = [
-          ...new Set(allProducts.map((p) => p.collection)),
+          ...new Set(normalizedCollections.map((c) => c.charAt(0).toUpperCase() + c.slice(1))),
         ];
 
         setCollections(uniqueCollections);
@@ -42,10 +48,7 @@ export default function HomeCollections() {
   return (
     <div>
       {collections.map((collectionName) => (
-        <CollectionProducts
-          key={collectionName}
-          collectionName={collectionName}
-        />
+        <CollectionProducts key={collectionName} collectionName={collectionName} />
       ))}
     </div>
   );
