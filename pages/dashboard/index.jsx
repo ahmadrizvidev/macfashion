@@ -388,7 +388,7 @@ export default function Dashboard() {
                 >
                     <FaTimes />
                 </button>
-                <h1 className="text-3xl font-extrabold mb-12 text-center text-indigo-100 mt-5">
+                <h1 className="text-3xl font-extrabold mb-12 text-center text-indigo-100 mt-8">
                     Admin Panel
                 </h1>
                 <nav className="flex flex-col gap-3 flex-1">
@@ -544,10 +544,11 @@ export default function Dashboard() {
                             disabled={loading}
                         >
                             <option value="">Select Collection</option>
-                            <option value="Womens Collection">Tracksuit</option>
+                            <option value="Tracksuit">Tracksuit</option>
+                            <option value="Mens">Mens</option>
                             <option value="Mens Summer Collection">Mens Summer Collection</option>
                             <option value="Mens Winter Collection">Mens Winter Collection</option>
-                            <option value="Womens Collection">Womens Collection</option>
+                            <option value="Womens ">Womens Collection</option>
                             <option value="Womens Summer Collection">Womens Summer Collection</option>
                             <option value="Womens Winter Collection">Womens Winter Collection</option>
                             <option value="Kids Collection">Kids Collection</option>
