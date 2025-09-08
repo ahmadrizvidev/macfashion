@@ -201,12 +201,12 @@ export default function ProductDetails() {
     localStorage.setItem("checkoutItems", JSON.stringify(productForCheckout));
     router.push("/checkout");
   };
-
-  const handleWhatsAppOrder = () => {
-    const message = `I would like to order the product: ${product.title}\nPrice: ${product.price}\nProduct Link: ${window.location.href}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+ const handleWhatsAppOrder = () => {
+    const message = `I would like to order the product: ${product?.title}\nPrice: ${product?.price}\nProduct Link: ${window.location.href}`;
+    const whatsappUrl = `https://wa.me/923052732104?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
+
 
   if (loading) {
     return (

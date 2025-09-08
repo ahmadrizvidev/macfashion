@@ -68,6 +68,7 @@ export default function Header() {
   const navLinks = [
     { name: "Men", href: "/collections/Mens" },
     { name: "Women", href: "/collections/womens-winter-collection" },
+    { name: "Women Summer", href: "/collections/womens-summer-collection" },
     { name: "Kids", href: "/collections/Kids" },
     { name: "Tracksuit", href: "/collections/tracksuit" },
     { name: "Bed Sheets", href: "/collections/bed-sheet" },
