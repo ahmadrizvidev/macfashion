@@ -29,6 +29,7 @@ export default function ProductDetails() {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
   const [error, setError] = useState(null);
+  const [imageLoaded, setImageLoaded] = useState(false); // New state for image loader
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
@@ -248,18 +249,30 @@ export default function ProductDetails() {
                 <video
                   src={media[selectedMediaIndex]}
                   controls
-                  className="w-full h-full object-cover rounded-xl"
+                  className="w-full h-full object-contain rounded-xl"
                 />
               ) : (
-                <Image
-                  src={media[selectedMediaIndex]}
-                  alt={product.title}
-                  fill
-                  style={{ objectFit: "cover" }} // Changed from "contain" to "cover"
-                  className="rounded-xl"
-                  placeholder="blur"
-                  blurDataURL="/placeholder.png"
-                />
+                <>
+                  {!imageLoaded && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+                      <motion.div
+                        className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full"
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 1 }}
+                      />
+                    </div>
+                  )}
+                  <Image
+                    src={media[selectedMediaIndex]}
+                    alt={product.title}
+                    fill
+                    style={{ objectFit: "contain" }}
+                    className={`rounded-xl transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    placeholder="blur"
+                    blurDataURL="/placeholder.png"
+                    onLoadingComplete={() => setImageLoaded(true)}
+                  />
+                </>
               )}
             </div>
             <div className="flex gap-4 mt-2 overflow-x-auto pb-2">
@@ -449,14 +462,14 @@ export default function ProductDetails() {
               <div
                 key={rp.id}
                 className="bg-white rounded-xl shadow-lg p-4 cursor-pointer transition-transform transform hover:scale-105"
-                onClick={() => router.push(`/products/${rp.id}`)}
+                onClick={() => router.push(`/product/${rp.id}`)}
               >
                 <div className="w-full h-48 relative rounded-lg overflow-hidden">
                   <Image
                     src={rp.images && rp.images[0] ? rp.images[0] : "/placeholder.png"}
                     alt={rp.title}
                     fill
-                    style={{ objectFit: "cover" }}
+                    style={{ objectFit: "contain" }}
                     className="rounded-lg"
                   />
                 </div>
