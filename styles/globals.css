@@ -18,8 +18,13 @@
     --foreground: #ededed;
   }
 }
-
+html{
+  width: 100vw;
+  overflow-x: hidden;
+}
 body {
+  width: 100vw;
+  overflow-x: hidden;
   background: #fff !important;
   color: #000 !important;
   font-family: Arial, Helvetica, sans-serif;

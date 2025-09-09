@@ -13,7 +13,9 @@ import {
 import { FaTrash, FaPen, FaUpload, FaPlus, FaTimes, FaBars, FaSpinner } from "react-icons/fa";
 import { FiDollarSign, FiCalendar, FiShoppingCart } from "react-icons/fi";
 import { motion } from "framer-motion";
-import { db } from "../../lib/firebase";
+import { db,auth } from "../../lib/firebase";
+import { useRouter } from "next/router";
+import { onAuthStateChanged,signOut } from "firebase/auth";
 
 // Use the app ID to create a unique path for data
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -60,9 +62,27 @@ export default function Dashboard() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [newStatus, setNewStatus] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
     const initialOrderCountRef = useRef(0);
     const [orderSubTab, setOrderSubTab] = useState("pending");
+  const [authorized, setAuthorized] = useState(false);
+  const router = useRouter();
+ useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user?.email === "reside452@gmail.com") {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+        router.replace("/dashboard/login");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+
 
     const [stats, setStats] = useState({
         totalRevenue: 0,

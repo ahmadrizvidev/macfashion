@@ -54,6 +54,7 @@ export default function Header() {
     },
     { name: "Tracksuit", href: "/collections/tracksuit" },
     { name: "Bed Sheets", href: "/collections/bed-sheet" },
+    { name: "Mens Shawl", href: "/collections/mens-shawl" },
     { name: "Order Tracking", href: "/order-status" },
   ];
 

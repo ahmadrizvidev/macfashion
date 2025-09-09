@@ -12,8 +12,8 @@ import {
   getDocs,
   addDoc,
 } from "firebase/firestore";
-import { motion } from "framer-motion";
-import { FiShoppingCart, FiCreditCard, FiMessageSquare, FiClock, FiAlertTriangle } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
+import { FiShoppingCart, FiCreditCard, FiMessageSquare, FiClock, FiAlertTriangle, FiStar, FiX } from "react-icons/fi";
 
 export default function ProductDetails() {
   const router = useRouter();
@@ -29,8 +29,8 @@ export default function ProductDetails() {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
   const [error, setError] = useState(null);
-  const [imageLoaded, setImageLoaded] = useState(false); // New state for image loader
-
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [quantity, setQuantity] = useState(1); // New state for quantity
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
 
@@ -168,9 +168,9 @@ export default function ProductDetails() {
     );
 
     if (existingItemIndex !== -1) {
-      cart[existingItemIndex].quantity += 1;
+      cart[existingItemIndex].quantity += quantity;
     } else {
-      cart.push(productWithVariants);
+      cart.push({ ...productWithVariants, quantity: quantity });
     }
 
     localStorage.setItem("cart", JSON.stringify(cart));
@@ -194,13 +194,14 @@ export default function ProductDetails() {
     const productForCheckout = [{
       ...product,
       id,
-      quantity: 1,
+      quantity: quantity,
       selectedCategory,
       selectedColor
     }];
     localStorage.setItem("checkoutItems", JSON.stringify(productForCheckout));
     router.push("/checkout");
   };
+
   const handleWhatsAppOrder = () => {
     const message = `I would like to order the product: ${product?.title}\nPrice: ${product?.price}\nProduct Link: ${window.location.href}`;
     const whatsappUrl = `https://wa.me/923052732104?text=${encodeURIComponent(message)}`;
@@ -282,7 +283,7 @@ export default function ProductDetails() {
                   className={`w-24 h-24 border-2 rounded-lg cursor-pointer flex-shrink-0 flex items-center justify-center overflow-hidden transition-colors ${selectedMediaIndex === idx
                       ? "border-indigo-600 shadow-md"
                       : "border-gray-300 hover:border-indigo-400"
-                  }`}
+                    }`}
                   onClick={() => setSelectedMediaIndex(idx)}
                 >
                   {isVideo(m) ? (
@@ -347,10 +348,10 @@ export default function ProductDetails() {
                       className={`px-4 py-2 rounded-lg transition-colors border-2 ${selectedCategory === category
                           ? "bg-indigo-600 text-white border-indigo-600"
                           : "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300"
-                      }`}
+                        }`}
                       onClick={() => {
-                          setSelectedCategory(category);
-                          setError(null);
+                        setSelectedCategory(category);
+                        setError(null);
                       }}
                     >
                       {category}
@@ -359,7 +360,7 @@ export default function ProductDetails() {
                 </div>
               </div>
             )}
-           {uniqueColors.length > 0 && (
+            {uniqueColors.length > 0 && (
               <div className="flex flex-col gap-2">
                 <span className="font-semibold text-gray-700">Color:</span>
                 <div className="flex flex-wrap gap-2">
@@ -369,7 +370,7 @@ export default function ProductDetails() {
                       className={`px-4 py-2 rounded-lg transition-colors border-2 ${selectedColor === color
                           ? "bg-indigo-600 text-white border-indigo-600"
                           : "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300"
-                      }`}
+                        }`}
                       onClick={() => {
                         setSelectedColor(color);
                         setError(null);
@@ -381,6 +382,35 @@ export default function ProductDetails() {
                 </div>
               </div>
             )}
+     <div className="flex flex-col items-start gap-4 p-6 bg-white rounded-xl shadow-lg border border-gray-200 w-full max-w-sm mx-auto">
+  <span className="font-sans text-lg font-semibold text-gray-800">
+    Quantity
+  </span>
+  <div className="flex items-center justify-between w-full">
+    <button
+      onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+      className="flex items-center justify-center w-12 h-12 text-2xl font-bold text-gray-700 transition duration-300 ease-in-out bg-gray-100 rounded-full hover:bg-gray-200 active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
+      aria-label="Decrease quantity"
+    >
+      -
+    </button>
+    <input
+      type="number"
+      value={quantity}
+      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+      className="w-24 px-4 py-2 text-xl text-center transition duration-300 ease-in-out bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      min="1"
+      inputMode="numeric"
+    />
+    <button
+      onClick={() => setQuantity(prev => prev + 1)}
+      className="flex items-center justify-center w-12 h-12 text-2xl font-bold text-gray-700 transition duration-300 ease-in-out bg-gray-100 rounded-full hover:bg-gray-200 active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
+      aria-label="Increase quantity"
+    >
+      +
+    </button>
+  </div>
+</div>
             <div className="flex flex-col gap-4 mt-4">
               <button
                 className="flex-1 flex items-center justify-center gap-2 bg-black text-white px-8 py-4 rounded-lg hover:bg-gray-800 transition-colors text-lg font-semibold shadow-lg"
@@ -482,6 +512,78 @@ export default function ProductDetails() {
           </div>
         </div>
       )}
+      <AnimatePresence>
+        {showReviewPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          >
+            <motion.div
+              initial={{ y: -50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md relative"
+            >
+              <button
+                onClick={() => setShowReviewPopup(false)}
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
+              >
+                <FiX size={24} />
+              </button>
+              <h2 className="text-2xl font-bold mb-4">Add Your Review</h2>
+              {error && (
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded-md mb-4">
+                  {error}
+                </div>
+              )}
+              <div className="mb-4">
+                <p className="font-semibold mb-2">Your Rating:</p>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <motion.div
+                      key={star}
+                      whileHover={{ scale: 1.2 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setRating(star)}
+                      className="cursor-pointer"
+                    >
+                      <FiStar
+                        size={32}
+                        className={`transition-colors ${star <= rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block font-semibold mb-2">Your Comment:</label>
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  className="w-full h-24 border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-600 resize-none"
+                  placeholder="Tell us what you think..."
+                />
+              </div>
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setShowReviewPopup(false)}
+                  className="px-6 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitReview}
+                  className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-500 transition-colors"
+                >
+                  Submit
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
