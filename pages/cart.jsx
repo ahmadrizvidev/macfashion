@@ -57,7 +57,7 @@ export default function Cart() {
     );
   };
 
-  const shipping = cartItems.length > 0 ? 270 : 0;
+  const shipping = cartItems.length > 0 ? 220 : 0;
   const tax = cartItems.length > 0 ? 0 : 0;
   const total = calculateSubtotal() + shipping + tax;
 
