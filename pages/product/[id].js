@@ -1,5 +1,4 @@
 // components/ProductDetails.js
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Image from "next/image";
@@ -29,9 +28,8 @@ export default function ProductDetails() {
   const [showReviewPopup, setShowReviewPopup] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
-  const [error, setError] = useState(null); // New state for error messages
+  const [error, setError] = useState(null);
 
-  // State for selected variants
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
 
@@ -69,7 +67,9 @@ export default function ProductDetails() {
         if (docSnap.exists()) {
           const prodData = docSnap.data();
           setProduct(prodData);
-          if (prodData.category) fetchRelatedProducts(prodData.category);
+          if (prodData.collection) {
+            fetchRelatedProducts(prodData.collection);
+          }
           fetchReviews(id);
         } else {
           console.error("Product not found");
@@ -82,6 +82,24 @@ export default function ProductDetails() {
 
     fetchProduct();
   }, [id]);
+
+  const fetchRelatedProducts = async (collectionName) => {
+    if (!collectionName) return;
+    try {
+      const q = query(
+        collection(db, "products"),
+        where("collection", "==", collectionName)
+      );
+      const querySnapshot = await getDocs(q);
+      const related = querySnapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((p) => p.id !== id)
+        .slice(0, 4);
+      setRelatedProducts(related);
+    } catch (err) {
+      console.error("Failed to fetch related products:", err);
+    }
+  };
 
   const fetchReviews = async (productId) => {
     try {
@@ -120,24 +138,6 @@ export default function ProductDetails() {
     }
   };
 
-  const fetchRelatedProducts = async (category) => {
-    if (!category) return;
-    try {
-      const q = query(
-        collection(db, "products"),
-        where("category", "==", category)
-      );
-      const querySnapshot = await getDocs(q);
-      const related = querySnapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((p) => p.id !== id)
-        .slice(0, 4);
-      setRelatedProducts(related);
-    } catch (err) {
-      console.error("Failed to fetch related products:", err);
-    }
-  };
-
   const addToCart = () => {
     setError(null);
     const hasCategoryVariants = product.variants?.some(v => v.size);
@@ -162,7 +162,6 @@ export default function ProductDetails() {
       selectedColor
     };
 
-    // Check if the product already exists with the same variant
     const existingItemIndex = cart.findIndex(
       (item) => item.id === id && item.selectedColor === selectedColor && item.selectedCategory === selectedCategory
     );
@@ -201,12 +200,11 @@ export default function ProductDetails() {
     localStorage.setItem("checkoutItems", JSON.stringify(productForCheckout));
     router.push("/checkout");
   };
- const handleWhatsAppOrder = () => {
+  const handleWhatsAppOrder = () => {
     const message = `I would like to order the product: ${product?.title}\nPrice: ${product?.price}\nProduct Link: ${window.location.href}`;
     const whatsappUrl = `https://wa.me/923052732104?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
-
 
   if (loading) {
     return (
@@ -224,7 +222,6 @@ export default function ProductDetails() {
     return <p className="text-center py-12 text-xl">Product not found.</p>;
   }
 
-  // Extract unique categories and colors
   const uniqueCategories = product.variants?.length > 0
     ? [...new Set(product.variants.map(v => v.size || "Default"))]
     : [];
@@ -243,37 +240,33 @@ export default function ProductDetails() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
-      {/* Product Details Section */}
       <div className="bg-white pt-6 pb-12 shadow-sm md:shadow-lg rounded-b-xl">
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex flex-col md:flex-row gap-10">
-          {/* Left Media */}
           <div className="w-full md:w-1/2 flex flex-col gap-6">
             <div className="w-full h-auto min-h-[400px] aspect-video relative rounded-xl overflow-hidden shadow-md bg-gray-100 flex items-center justify-center">
               {isVideo(media[selectedMediaIndex]) ? (
                 <video
                   src={media[selectedMediaIndex]}
                   controls
-                  className="w-full h-full object-contain rounded-xl"
+                  className="w-full h-full object-cover rounded-xl"
                 />
               ) : (
                 <Image
                   src={media[selectedMediaIndex]}
                   alt={product.title}
                   fill
-                  style={{ objectFit: "contain" }}
+                  style={{ objectFit: "cover" }} // Changed from "contain" to "cover"
                   className="rounded-xl"
                   placeholder="blur"
                   blurDataURL="/placeholder.png"
                 />
               )}
             </div>
-            {/* Thumbnails */}
             <div className="flex gap-4 mt-2 overflow-x-auto pb-2">
               {media.map((m, idx) => (
                 <div
                   key={idx}
-                  className={`w-24 h-24 border-2 rounded-lg cursor-pointer flex-shrink-0 flex items-center justify-center overflow-hidden transition-colors ${
-                    selectedMediaIndex === idx
+                  className={`w-24 h-24 border-2 rounded-lg cursor-pointer flex-shrink-0 flex items-center justify-center overflow-hidden transition-colors ${selectedMediaIndex === idx
                       ? "border-indigo-600 shadow-md"
                       : "border-gray-300 hover:border-indigo-400"
                   }`}
@@ -295,20 +288,15 @@ export default function ProductDetails() {
               ))}
             </div>
           </div>
-
-          {/* Right Info */}
           <div className="w-full md:w-1/2 flex flex-col gap-6">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">{product.title}</h1>
             <p className="text-gray-600 text-base sm:text-lg leading-relaxed">{product.description}</p>
-
             <div className="flex items-center gap-4">
               {product.oldPrice && (
                 <span className="line-through text-gray-400 text-xl">PKR {product.oldPrice}</span>
               )}
               <span className="text-red-600 font-bold text-3xl">PKR {product.price}</span>
             </div>
-
-            {/* Countdown Clock */}
             <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 p-3 rounded-lg font-bold">
               <FiClock className="w-6 h-6 animate-pulse" />
               <span className="text-sm">Limited time offer! Ends in</span>
@@ -316,8 +304,6 @@ export default function ProductDetails() {
                 {timeLeft.minutes.toString().padStart(2, '0')}:{timeLeft.seconds.toString().padStart(2, '0')}
               </span>
             </div>
-
-            {/* Limited Stock Badge */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -327,8 +313,6 @@ export default function ProductDetails() {
               <FiAlertTriangle className="w-5 h-5" />
               <span className="text-sm">Only a few left! Get yours before they're gone.</span>
             </motion.div>
-
-            {/* New Error Message UI */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -340,8 +324,6 @@ export default function ProductDetails() {
                 <p className="font-medium">{error}</p>
               </motion.div>
             )}
-
-            {/* Variant Selection UI */}
             {uniqueCategories.length > 0 && (
               <div className="flex flex-col gap-2">
                 <span className="font-semibold text-gray-700">Size:</span>
@@ -349,8 +331,7 @@ export default function ProductDetails() {
                   {uniqueCategories.map((category) => (
                     <button
                       key={category}
-                      className={`px-4 py-2 rounded-lg transition-colors border-2 ${
-                        selectedCategory === category
+                      className={`px-4 py-2 rounded-lg transition-colors border-2 ${selectedCategory === category
                           ? "bg-indigo-600 text-white border-indigo-600"
                           : "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300"
                       }`}
@@ -365,33 +346,28 @@ export default function ProductDetails() {
                 </div>
               </div>
             )}
-
-       {uniqueColors.length > 0 && (
-  <div className="flex flex-col gap-2">
-    <span className="font-semibold text-gray-700">Color:</span>
-    <div className="flex flex-wrap gap-2">
-      {uniqueColors.map((color) => (
-        <button
-          key={color}
-          className={`px-4 py-2 rounded-lg transition-colors border-2 ${
-            selectedColor === color
-              ? "bg-indigo-600 text-white border-indigo-600"
-              : "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300"
-          }`}
-          onClick={() => {
-            setSelectedColor(color);
-            setError(null);
-          }}
-        >
-          {color}
-        </button>
-      ))}
-    </div>
-  </div>
-)}
-
-
-            {/* Vertical CTA Buttons */}
+           {uniqueColors.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="font-semibold text-gray-700">Color:</span>
+                <div className="flex flex-wrap gap-2">
+                  {uniqueColors.map((color) => (
+                    <button
+                      key={color}
+                      className={`px-4 py-2 rounded-lg transition-colors border-2 ${selectedColor === color
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300"
+                      }`}
+                      onClick={() => {
+                        setSelectedColor(color);
+                        setError(null);
+                      }}
+                    >
+                      {color}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex flex-col gap-4 mt-4">
               <button
                 className="flex-1 flex items-center justify-center gap-2 bg-black text-white px-8 py-4 rounded-lg hover:bg-gray-800 transition-colors text-lg font-semibold shadow-lg"
@@ -415,8 +391,6 @@ export default function ProductDetails() {
           </div>
         </div>
       </div>
-
-      {/* Reviews Section */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8 md:mt-16">
         <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg">
           <div className="flex justify-between items-center mb-6">
@@ -448,9 +422,7 @@ export default function ProductDetails() {
                       <svg
                         key={s}
                         xmlns="http://www.w3.org/2000/svg"
-                        className={`w-5 h-5 transition-colors ${
-                          s <= r.rating ? "fill-yellow-400" : "fill-gray-300"
-                        }`}
+                        className={`w-5 h-5 transition-colors ${s <= r.rating ? "fill-yellow-400" : "fill-gray-300"}`}
                         viewBox="0 0 24 24"
                       >
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -467,56 +439,6 @@ export default function ProductDetails() {
           </div>
         </div>
       </div>
-
-      {/* Review Popup */}
-      {showReviewPopup && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg p-8 relative shadow-xl">
-            <h3 className="text-2xl font-semibold mb-4 text-gray-900">
-              Add Your Review
-            </h3>
-            <div className="flex items-center gap-2 mb-4">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span
-                  key={star}
-                  className={`cursor-pointer text-4xl transition-colors ${
-                    star <= rating ? "text-yellow-400" : "text-gray-300"
-                  }`}
-                  onClick={() => setRating(star)}
-                >
-                  ★
-                </span>
-              ))}
-            </div>
-            <textarea
-              className="w-full border border-gray-300 rounded-lg p-3 mb-4 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-              placeholder="Write your review here..."
-              rows="4"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-            />
-            <div className="flex justify-end gap-3">
-              <button
-                className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
-                onClick={() => {
-                    setShowReviewPopup(false);
-                    setError(null);
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-500 transition-colors font-semibold"
-                onClick={submitReview}
-              >
-                Submit Review
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Related Products Section */}
       {relatedProducts.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 md:px-8 mt-8 md:mt-16">
           <h2 className="text-3xl font-bold mb-8 text-center text-gray-900">
