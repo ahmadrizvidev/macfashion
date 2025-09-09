@@ -93,7 +93,7 @@ export default function CollectionDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-4 sm:p-6 lg:p-8 w-[100vw] overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         {/* Header and Sorting Controls */}
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row justify-between items-center">

@@ -75,7 +75,7 @@ export default function CollectionProducts({ collectionName }) {
   }
 
   return (
-    <section className="w-full py-12 bg-gray-50 overflow-x-hidden">
+    <section className="w-[100vw] py-12 bg-gray-50 overflow-x-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 capitalize">
