@@ -49,7 +49,11 @@ export default function SummerTracksuits() {
         const colRef = collection(db, "products");
         const snapshot = await getDocs(colRef);
         const productsWithReviews = await fetchProductsWithReviews(snapshot);
-        setProducts(productsWithReviews);
+        
+        // Sort products by price from low to high
+        const sortedProducts = productsWithReviews.sort((a, b) => a.price - b.price);
+        
+        setProducts(sortedProducts);
       } catch (err) {
         console.error("Failed to fetch products:", err);
       }

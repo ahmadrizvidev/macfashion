@@ -6,7 +6,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import CollectionSection from "../componenets/CollectionSection"; // your existing collection sections
+import CollectionSection from "../componenets/CollectionSection";
 import { FaSpinner } from 'react-icons/fa';
 
 export default function ShopAll() {
@@ -16,6 +16,10 @@ export default function ShopAll() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [categories, setCategories] = useState([]);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 30;
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -55,10 +59,27 @@ export default function ShopAll() {
         p.title.toLowerCase().includes(search.toLowerCase())
       );
     }
+    
+    // Sort products by price from low to high
+    temp.sort((a, b) => a.price - b.price);
 
     setFilteredProducts(temp);
+    
+    // Reset page to 1 whenever filters change
+    setCurrentPage(1);
   }, [search, categoryFilter, products]);
 
+  // Get current products for pagination
+  const indexOfLastProduct = currentPage * productsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  
   if (loading)
     return (
       <div className="flex justify-center items-center h-96">
@@ -108,11 +129,11 @@ export default function ShopAll() {
       </div>
 
       {/* Filtered Products Grid */}
-      {filteredProducts.length === 0 ? (
+      {currentProducts.length === 0 ? (
         <p className="text-center text-gray-500 py-20">No products found.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {filteredProducts.map((product) => (
+          {currentProducts.map((product) => (
             <motion.div
               key={product.id}
               className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-transform transform hover:-translate-y-2 duration-300 overflow-hidden flex flex-col h-full"
@@ -156,6 +177,25 @@ export default function ShopAll() {
                 </div>
               </Link>
             </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-12 space-x-2">
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i + 1}
+              onClick={() => handlePageChange(i + 1)}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors duration-300
+                ${currentPage === i + 1
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+            >
+              {i + 1}
+            </button>
           ))}
         </div>
       )}

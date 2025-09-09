@@ -75,7 +75,7 @@ export default function CollectionProducts({ collectionName }) {
   }
 
   return (
-    <section className="py-12 bg-gray-50">
+    <section className="w-full py-12 bg-gray-50 overflow-x-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 capitalize">
@@ -90,7 +90,7 @@ export default function CollectionProducts({ collectionName }) {
         </div>
 
         {products.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 md:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 md:gap-8">
             {products.map((product) => (
               <Link
                 key={product.id}
