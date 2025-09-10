@@ -32,8 +32,8 @@ export default function Header() {
       name: "Men",
       href: "/collections/mens",
       children: [
-        { name: "Summer Collection", href: "/collections/men-summer-collection" },
-        { name: "Winter Collection", href: "/collections/men-winter-collection" },
+        { name: "Summer Collection", href: "/collections/mens-summer-collection" },
+        { name: "Winter Collection", href: "/collections/mens-winter-collection" },
       ],
     },
     {

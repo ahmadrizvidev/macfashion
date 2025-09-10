@@ -10,12 +10,12 @@ import {
     query,
     orderBy,
 } from "firebase/firestore";
-import { FaTrash, FaPen, FaUpload, FaPlus, FaTimes, FaBars, FaSpinner } from "react-icons/fa";
+import { FaTrash, FaPen, FaUpload, FaPlus, FaTimes, FaBars, FaSpinner, FaFilter } from "react-icons/fa";
 import { FiDollarSign, FiCalendar, FiShoppingCart } from "react-icons/fi";
 import { motion } from "framer-motion";
-import { db,auth } from "../../lib/firebase";
+import { db, auth } from "../../lib/firebase";
 import { useRouter } from "next/router";
-import { onAuthStateChanged,signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 // Use the app ID to create a unique path for data
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -36,25 +36,27 @@ const uploadToCloudinary = async (file, type) => {
 };
 
 const cleanDataForFirestore = (data) => {
-  if (Array.isArray(data)) {
-    return data
-      .map(item => cleanDataForFirestore(item))
-      .filter(item => item !== undefined); // remove undefined array items
-  } else if (data && typeof data === "object") {
-    const cleaned = {};
-    for (const key in data) {
-      if (data[key] !== undefined) {
-        cleaned[key] = cleanDataForFirestore(data[key]);
-      }
+    if (Array.isArray(data)) {
+        return data
+            .map(item => cleanDataForFirestore(item))
+            .filter(item => item !== undefined); // remove undefined array items
+    } else if (data && typeof data === "object") {
+        const cleaned = {};
+        for (const key in data) {
+            if (data[key] !== undefined) {
+                cleaned[key] = cleanDataForFirestore(data[key]);
+            }
+        }
+        return cleaned;
     }
-    return cleaned;
-  }
-  return data;
+    return data;
 };
 
 export default function Dashboard() {
     const [activeTab, setActiveTab] = useState("home");
     const [products, setProducts] = useState([]);
+    const [filteredProducts, setFilteredProducts] = useState([]);
+    const [selectedCollection, setSelectedCollection] = useState("All");
     const [orders, setOrders] = useState([]);
     const [newOrdersCount, setNewOrdersCount] = useState(0);
     const [editingProduct, setEditingProduct] = useState(null);
@@ -62,27 +64,44 @@ export default function Dashboard() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [newStatus, setNewStatus] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     const initialOrderCountRef = useRef(0);
     const [orderSubTab, setOrderSubTab] = useState("pending");
-  const [authorized, setAuthorized] = useState(false);
-  const router = useRouter();
- useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user?.email === "reside452@gmail.com") {
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-        router.replace("/dashboard/login");
-      }
-      setLoading(false);
-    });
+    const [authorized, setAuthorized] = useState(false);
+    const router = useRouter();
 
-    return () => unsubscribe();
-  }, [router]);
+    // Available collections for filtering
+    const collections = [
+        "All",
+        "Tracksuit",
+        "Mens",
+        "Mens Summer Collection",
+        "Mens Winter Collection",
+        "Womens",
+        "Womens Summer Collection",
+        "Womens Winter Collection",
+        "Kids Collection",
+        "Kids Summer Collection",
+        "Kids Winter Collection",
+        "Bed Sheet",
+        "Blanket",
+        "Mens Shawl"
+    ];
 
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user?.email === "reside452@gmail.com") {
+                setIsAdmin(true);
+            } else {
+                setIsAdmin(false);
+                router.replace("/dashboard/login");
+            }
+            setLoading(false);
+        });
 
+        return () => unsubscribe();
+    }, [router]);
 
     const [stats, setStats] = useState({
         totalRevenue: 0,
@@ -101,7 +120,16 @@ export default function Dashboard() {
     const [images, setImages] = useState([]);
     const [video, setVideo] = useState(null);
 
-    //  Fetch products and orders 
+    // Filter products based on selected collection
+    useEffect(() => {
+        if (selectedCollection === "All") {
+            setFilteredProducts(products);
+        } else {
+            setFilteredProducts(products.filter(product => product.collection === selectedCollection));
+        }
+    }, [products, selectedCollection]);
+
+    // Fetch products and orders 
     const fetchProducts = async () => {
         try {
             setLoading(true);
@@ -209,7 +237,7 @@ export default function Dashboard() {
         }
     };
 
-    //  Media Handlers (Updated for Cloudinary) 
+    // Media Handlers (Updated for Cloudinary) 
     const handleImageUpload = (e) => {
         const files = Array.from(e.target.files);
         const previews = files.map((file) => ({
@@ -233,7 +261,7 @@ export default function Dashboard() {
         setVideo(null);
     };
 
-    //  Product CRUD Operations 
+    // Product CRUD Operations 
     const resetForm = () => {
         setEditingProduct(null);
         setNewProduct({
@@ -353,7 +381,7 @@ export default function Dashboard() {
         }
     };
 
-    //  Variant Handlers 
+    // Variant Handlers 
     const addVariant = () => {
         setNewProduct((prev) => ({
             ...prev,
@@ -523,8 +551,6 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                
-
                 {/* Add/Edit Product Tab */}
                 {activeTab === "products" && (
                     <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-6">
@@ -577,7 +603,6 @@ export default function Dashboard() {
                             <option value="Bed Sheet">Bed Sheet</option>
                             <option value="Blanket">Blanket</option>
                             <option value="Mens Shawl">Mens Shawl</option>
-                            
                         </select>
 
                         {/* Variants Section */}
@@ -676,77 +701,128 @@ export default function Dashboard() {
 
                         <button
                             onClick={editingProduct ? saveEditProduct : addProduct}
-                            className={`w-full text-white px-6 py-3 rounded-lg font-bold text-lg shadow-lg transition-colors duration-200 transform hover:scale-105 ${loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
+                            className={`w-full text-white px-6 py-3 rounded-lg font-bold text-lg shadow-lg transition-colors duration-200 transform hover:scale-105 ${loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
+                                }`}
                             disabled={loading}
                         >
                             {loading ? (
                                 <>
                                     <FaSpinner className="animate-spin mr-2 inline-block" />
-                                    Loading...
+                                    {editingProduct ? "Updating..." : "Adding..."}
                                 </>
                             ) : (
-                                editingProduct ? "Save Changes" : "Add Product"
+                                editingProduct ? "Update Product" : "Add Product"
                             )}
                         </button>
+
+                        {editingProduct && (
+                            <button
+                                onClick={resetForm}
+                                className="w-full bg-gray-500 text-white px-6 py-3 rounded-lg font-bold text-lg shadow-lg hover:bg-gray-600 transition-colors duration-200"
+                                disabled={loading}
+                            >
+                                Cancel Edit
+                            </button>
+                        )}
                     </div>
                 )}
-
-                
 
                 {/* Manage Products Tab */}
                 {activeTab === "manage" && (
                     <div className="space-y-6">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                            Manage Products
-                        </h2>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                            <h2 className="text-3xl font-bold text-gray-900">Manage Products</h2>
+                            <div className="flex items-center gap-2">
+                                <FaFilter className="text-gray-500" />
+                                <select
+                                    value={selectedCollection}
+                                    onChange={(e) => setSelectedCollection(e.target.value)}
+                                    className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                >
+                                    {collections.map((collection) => (
+                                        <option key={collection} value={collection}>
+                                            {collection}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
                         {loading ? (
                             <div className="flex justify-center items-center h-48">
                                 <FaSpinner className="animate-spin text-4xl text-indigo-600" />
                                 <span className="ml-4 text-xl font-semibold text-indigo-600">Loading Products...</span>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {products.map((p) => (
-                                    <div
-                                        key={p.id}
-                                        className="bg-white p-4 rounded-xl shadow-lg flex flex-col items-stretch transform transition-transform duration-300 hover:scale-105"
-                                    >
-                                        {p.images?.[0] && (
-                                            <img
-                                                src={p.images[0]}
-                                                alt={p.title}
-                                                className="w-full h-48 object-cover rounded-lg mb-4"
-                                            />
-                                        )}
-                                        <h3 className="font-bold text-lg text-gray-900">{p.title}</h3>
-                                        <p className="text-red-600 font-extrabold text-xl mt-1">
-                                            PKR {p.price}
-                                        </p>
-                                        <p className="text-gray-500 text-sm mt-1">{p.collection}</p>
-                                        <div className="flex gap-2 mt-4">
-                                            <button
-                                                className={`flex-1 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2 ${loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
-                                                onClick={() => editProduct(p)}
-                                                disabled={loading}
-                                            >
-                                                <FaPen /> Edit
-                                            </button>
-                                            <button
-                                                className={`flex-1 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2 ${loading ? "bg-red-300 cursor-not-allowed" : "bg-red-500 hover:bg-red-600"}`}
-                                                onClick={() => deleteProduct(p.id)}
-                                                disabled={loading}
-                                            >
-                                                <FaTrash /> Delete
-                                            </button>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {filteredProducts.map((product) => (
+                                    <div key={product.id} className="bg-white rounded-2xl shadow-xl overflow-hidden transform transition-transform duration-300 hover:scale-105">
+                                        <div className="relative h-48">
+                                            {product.images && product.images[0] ? (
+                                                <img
+                                                    src={product.images[0]}
+                                                    alt={product.title}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                                    <span className="text-gray-500">No Image</span>
+                                                </div>
+                                            )}
+                                            <div className="absolute top-2 right-2 flex gap-2">
+                                                <button
+                                                    onClick={() => editProduct(product)}
+                                                    className="bg-blue-600 text-white p-2 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+                                                    disabled={loading}
+                                                >
+                                                    <FaPen size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteProduct(product.id)}
+                                                    className="bg-red-600 text-white p-2 rounded-full shadow-lg hover:bg-red-700 transition-colors"
+                                                    disabled={loading}
+                                                >
+                                                    <FaTrash size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="p-6">
+                                            <h3 className="text-xl font-bold text-gray-900 mb-2 truncate">{product.title}</h3>
+                                            <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
+                                            <div className="flex justify-between items-center mb-3">
+                                                <span className="text-2xl font-bold text-green-600">PKR {product.price}</span>
+                                                <span className="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2 py-1 rounded-full">
+                                                    {product.collection}
+                                                </span>
+                                            </div>
+                                            {product.variants && product.variants.length > 0 && (
+                                                <div className="mt-3">
+                                                    <p className="text-sm font-semibold text-gray-700 mb-1">Variants:</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {product.variants.map((variant, idx) => (
+                                                            <span key={idx} className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
+                                                                {variant.size && `${variant.size}`}{variant.size && variant.color && " - "}{variant.color && `${variant.color}`}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
+
+                        {!loading && filteredProducts.length === 0 && (
+                            <div className="text-center py-12">
+                                <FiShoppingCart className="mx-auto text-6xl text-gray-300 mb-4" />
+                                <p className="text-xl text-gray-500">
+                                    {selectedCollection === "All" ? "No products found." : `No products found in ${selectedCollection} collection.`}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
-
-                
 
                 {/* Orders Tab */}
                 {activeTab === "orders" && (
@@ -893,7 +969,7 @@ export default function Dashboard() {
                     </div>
                 )}
 
-            {/* Order Details Modal */}
+                {/* Order Details Modal */}
                 {selectedOrder && (
                     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
                         <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 space-y-6 transform transition-all scale-100 opacity-100">
@@ -913,25 +989,25 @@ export default function Dashboard() {
                                 <p className="text-lg font-semibold">Total Amount: <span className="font-normal text-green-600">PKR {selectedOrder.totalAmount.toFixed(2)}</span></p>
                                 <p className="text-lg font-semibold">Current Status: <span className={getStatusBadge(selectedOrder.status)}>{selectedOrder.status}</span></p>
                             </div>
-<div className="mt-6">
-    <h4 className="text-xl font-bold text-gray-900 mb-4">Ordered Items</h4>
-    <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
-        {selectedOrder.products?.map((item, index) => (
-            <div key={index} className="flex items-center gap-4 bg-gray-100 p-4 rounded-lg">
-                {item.images?.[0] && (
-                    <img src={item.images[0]} alt={item.title} className="w-16 h-16 object-cover rounded" />
-                )}
-                <div className="flex-1">
-                    <p className="font-semibold text-gray-800">{item.title}</p>
-                    <p className="text-sm text-gray-600">Price: PKR {item.price}</p>
-                    <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                    {item.selectedCategory && <p className="text-sm text-gray-600">Size: {item.selectedCategory}</p>}
-                    {item.selectedColor && <p className="text-sm text-gray-600">Color: {item.selectedColor}</p>}
-                </div>
-            </div>
-        ))}
-    </div>
-</div>
+                            <div className="mt-6">
+                                <h4 className="text-xl font-bold text-gray-900 mb-4">Ordered Items</h4>
+                                <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+                                    {selectedOrder.products?.map((item, index) => (
+                                        <div key={index} className="flex items-center gap-4 bg-gray-100 p-4 rounded-lg">
+                                            {item.images?.[0] && (
+                                                <img src={item.images[0]} alt={item.title} className="w-16 h-16 object-cover rounded" />
+                                            )}
+                                            <div className="flex-1">
+                                                <p className="font-semibold text-gray-800">{item.title}</p>
+                                                <p className="text-sm text-gray-600">Price: PKR {item.price}</p>
+                                                <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                                                {item.selectedCategory && <p className="text-sm text-gray-600">Size: {item.selectedCategory}</p>}
+                                                {item.selectedColor && <p className="text-sm text-gray-600">Color: {item.selectedColor}</p>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
 
                             <div className="mt-6 flex flex-col sm:flex-row gap-4">
                                 <select
@@ -967,5 +1043,4 @@ export default function Dashboard() {
             </main>
         </div>
     );
- 
 }
