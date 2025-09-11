@@ -6,12 +6,16 @@ import WhatsappButton from "@/componenets/WhatsappButton.jsx";
 import { useRouter } from "next/router.js";
 import * as gtag from "../lib/gtag";
 import { useEffect } from "react";
+import { initFBPixel } from "../lib/fbpixel"; // ✅ Import FB Pixel
 
 export default function App({ Component, pageProps }) {
-
   const router = useRouter();
 
   useEffect(() => {
+    // Initialize Facebook Pixel
+    initFBPixel();
+
+    // Google Analytics pageview on route change
     const handleRouteChange = (url) => {
       gtag.pageview(url);
     };
@@ -21,11 +25,13 @@ export default function App({ Component, pageProps }) {
     };
   }, [router.events]);
 
-  return <>
-  <AnnouncementBar/>
-    <Header/>
-  <Component {...pageProps} />;
-  <WhatsappButton/>
-  <Footer/>
-   </>
+  return (
+    <>
+      <AnnouncementBar />
+      <Header />
+      <Component {...pageProps} />
+      <WhatsappButton />
+      <Footer />
+    </>
+  );
 }
