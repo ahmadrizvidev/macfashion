@@ -3,15 +3,17 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { collection, getDocs } from "firebase/firestore";
-import { FaSpinner, FaShoppingBag, FaSortAmountDown, FaSortAmountUp } from "react-icons/fa";
+import {
+  FaSpinner,
+  FaShoppingBag,
+  FaSortAmountDown,
+  FaSortAmountUp,
+} from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../lib/firebase";
-import Link from "next/link";
 
-// Define the number of products per page
-const PRODUCTS_PER_PAGE = 30;
+const PRODUCTS_PER_PAGE = 12;
 
-// Convert kebab-case URL back to normal string (for display only)
 const fromUrl = (str) =>
   str.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -24,55 +26,48 @@ export default function CollectionDetailPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortOrder, setSortOrder] = useState("lowToHigh"); // 'lowToHigh' or 'highToLow'
-
-  const fetchCollectionProducts = async () => {
-    try {
-      setLoading(true);
-      const productsCollectionRef = collection(db, "products");
-      const snapshot = await getDocs(productsCollectionRef);
-
-      // Filter products **case-insensitively** for collection
-      const productsData = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter(
-          (p) =>
-            p.collection &&
-            p.collection.toLowerCase() === collectionName.toLowerCase()
-        );
-
-      // Simulate a network delay to prevent UI flickers on fast connections
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setProducts(productsData);
-      setCurrentPage(1); // Reset to the first page when a new collection is loaded
-    } catch (err) {
-      console.error("Failed to fetch collection products:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [sortOrder, setSortOrder] = useState("lowToHigh");
 
   useEffect(() => {
+    const fetchCollectionProducts = async () => {
+      try {
+        setLoading(true);
+        const productsCollectionRef = collection(db, "products");
+        const snapshot = await getDocs(productsCollectionRef);
+
+        const productsData = snapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .filter(
+            (p) =>
+              p.collection &&
+              p.collection.toLowerCase() === collectionName.toLowerCase()
+          );
+
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        setProducts(productsData);
+        setCurrentPage(1);
+      } catch (err) {
+        console.error("Failed to fetch collection products:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (collectionName) fetchCollectionProducts();
   }, [collectionName]);
 
-  // Use useMemo for sorted and paginated products to improve performance
   const sortedAndPaginatedProducts = useMemo(() => {
-    // Sort products based on the current sort order
     const sortedProducts = [...products].sort((a, b) => {
       const priceA = parseFloat(a.price || 0);
       const priceB = parseFloat(b.price || 0);
       return sortOrder === "lowToHigh" ? priceA - priceB : priceB - priceA;
     });
 
-    // Calculate pagination
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
     const endIndex = startIndex + PRODUCTS_PER_PAGE;
     return sortedProducts.slice(startIndex, endIndex);
   }, [products, currentPage, sortOrder]);
 
-  // Calculate the total number of pages
   const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
 
   const handleCardClick = (productId) => {
@@ -93,9 +88,9 @@ export default function CollectionDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-4 sm:p-6 lg:p-8 w-[100vw] overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-4 sm:p-6 lg:p-8 w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
-        {/* Header and Sorting Controls */}
+        {/* Header + Sorting */}
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row justify-between items-center">
           <div>
             <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 mb-2 sm:mb-4">
@@ -108,12 +103,14 @@ export default function CollectionDetailPage() {
 
           {products.length > 0 && (
             <div className="mt-4 sm:mt-0 flex items-center gap-2">
-              <span className="text-sm sm:text-base text-gray-700 font-semibold">Sort by Price:</span>
+              <span className="text-sm sm:text-base text-gray-700 font-semibold">
+                Sort by Price:
+              </span>
               <button
                 onClick={() => setSortOrder("lowToHigh")}
-                className={`flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transition-colors duration-200 ${
+                className={`flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-medium transition ${
                   sortOrder === "lowToHigh"
-                    ? "bg-indigo-600 text-white"
+                    ? "bg-indigo-600 text-white shadow-md"
                     : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                 }`}
               >
@@ -122,9 +119,9 @@ export default function CollectionDetailPage() {
               </button>
               <button
                 onClick={() => setSortOrder("highToLow")}
-                className={`flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold transition-colors duration-200 ${
+                className={`flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-medium transition ${
                   sortOrder === "highToLow"
-                    ? "bg-indigo-600 text-white"
+                    ? "bg-indigo-600 text-white shadow-md"
                     : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                 }`}
               >
@@ -135,7 +132,7 @@ export default function CollectionDetailPage() {
           )}
         </div>
 
-        {/* Products Grid with AnimatePresence for smooth transitions */}
+        {/* Products */}
         <AnimatePresence mode="wait">
           {products.length === 0 ? (
             <motion.div
@@ -150,7 +147,7 @@ export default function CollectionDetailPage() {
                 No Products Found
               </h3>
               <p className="text-gray-500">
-                This collection doesn't have any products yet.
+                This collection doesn’t have any products yet.
               </p>
             </motion.div>
           ) : (
@@ -171,7 +168,7 @@ export default function CollectionDetailPage() {
                   onClick={() => handleCardClick(product.id)}
                 >
                   {/* Product Image */}
-                  <div className="relative w-full h-80 bg-gray-200">
+                  <div className="relative w-full h-72 bg-gray-200">
                     {product.images?.[0] ? (
                       <img
                         src={product.images[0]}
@@ -187,17 +184,12 @@ export default function CollectionDetailPage() {
 
                   {/* Product Info */}
                   <div className="p-3 sm:p-4 flex flex-col flex-1 justify-between">
-                    <div>
-                      <h3 className="font-bold text-sm sm:text-lg text-gray-900 mb-1 sm:mb-2 line-clamp-2">
-                        {product.title}
-                      </h3>
-                    </div>
-                    <div className="flex justify-between items-center mt-2 sm:mt-4">
-                      <p className="text-lg sm:text-2xl font-bold text-red-600">
-                        PKR {parseFloat(product.price || 0).toFixed(0)}
-                      </p>
-                      {/* Removed individual "View Details" link to make the entire card clickable */}
-                    </div>
+                    <h3 className="font-bold text-sm sm:text-lg text-gray-900 line-clamp-2">
+                      {product.title}
+                    </h3>
+                    <p className="text-lg sm:text-2xl font-bold text-red-600 mt-2">
+                      PKR {parseFloat(product.price || 0).toFixed(0)}
+                    </p>
                   </div>
                 </motion.div>
               ))}
@@ -207,31 +199,60 @@ export default function CollectionDetailPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-8">
+          <div className="flex justify-center items-center gap-2 mt-10">
+            {/* Prev */}
             <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              Previous
+              Prev
             </button>
-            {[...Array(totalPages)].map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentPage(index + 1)}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  currentPage === index + 1
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
+
+            {/* Mobile: simple */}
+            <span className="sm:hidden text-sm font-semibold px-3">
+              {currentPage} / {totalPages}
+            </span>
+
+            {/* Desktop: numbered with ellipsis */}
+            <div className="hidden sm:flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => {
+                  return (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  );
+                })
+                .map((page, idx, arr) => {
+                  const prev = arr[idx - 1];
+                  return (
+                    <span key={page} className="flex items-center">
+                      {prev && page - prev > 1 && (
+                        <span className="px-2 text-gray-500">…</span>
+                      )}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                          currentPage === page
+                            ? "bg-indigo-600 text-white shadow-md"
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </span>
+                  );
+                })}
+            </div>
+
+            {/* Next */}
             <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              onClick={() =>
+                setCurrentPage((p) => Math.min(p + 1, totalPages))
+              }
               disabled={currentPage === totalPages}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               Next
             </button>
