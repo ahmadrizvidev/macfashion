@@ -9,7 +9,6 @@ import {
     FiCreditCard,
     FiUser,
     FiPhone,
-    FiMail,
     FiMapPin,
     FiHome,
     FiAlertCircle,
@@ -27,7 +26,7 @@ function generateTrackingId() {
     return `${timestamp}${randomString}`.toUpperCase();
 }
 
-// Memoized FormField component to prevent re-rendering
+// Memoized FormField component
 const FormField = memo(({ label, type, name, value, onChange, placeholder, required, icon: Icon }) => (
     <div className="relative group">
         <label className="block text-sm font-medium text-gray-700 mb-1 group-focus-within:text-indigo-600 transition-colors duration-200">
@@ -70,7 +69,6 @@ export default function Checkout() {
     const [formData, setFormData] = useState({
         fullName: "",
         whatsappNumber: "",
-        email: "",
         phoneNumber: "",
         city: "",
         province: "",
@@ -115,7 +113,7 @@ export default function Checkout() {
         e.preventDefault();
         setFormError("");
 
-        const requiredFields = ["fullName", "whatsappNumber", "email", "phoneNumber", "city", "province", "address"];
+        const requiredFields = ["fullName", "whatsappNumber", "phoneNumber", "city", "province", "address"];
         const allFieldsFilled = requiredFields.every(field => formData[field].trim() !== "");
 
         if (!allFieldsFilled) {
@@ -265,16 +263,6 @@ export default function Checkout() {
                             />
                         </div>
                         <FormField
-                            label="Email Address"
-                            type="email"
-                            name="email"
-                            placeholder="e.g., example@email.com"
-                            value={formData.email}
-                            onChange={handleChange}
-                            required
-                            icon={FiMail}
-                        />
-                        <FormField
                             label="Phone Number"
                             type="tel"
                             name="phoneNumber"
@@ -296,10 +284,10 @@ export default function Checkout() {
                                 icon={FiMapPin}
                             />
                             <FormField
-                                label="Province"
+                                label="District/Tehseel"
                                 type="text"
                                 name="province"
-                                placeholder="e.g., Punjab"
+                                placeholder="e.g., Model Town"
                                 value={formData.province}
                                 onChange={handleChange}
                                 required

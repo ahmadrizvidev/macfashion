@@ -983,7 +983,7 @@ export default function Dashboard() {
                                 <p className="text-lg font-semibold">Order ID: <span className="font-normal text-gray-600">{selectedOrder.id}</span></p>
                                 <p className="text-lg font-semibold">Date: <span className="font-normal text-gray-600">{selectedOrder.createdAt?.toDate().toLocaleString()}</span></p>
                                 <p className="text-lg font-semibold">Customer: <span className="font-normal text-gray-600">{selectedOrder.customerDetails?.fullName}</span></p>
-                                <p className="text-lg font-semibold">Email: <span className="font-normal text-gray-600">{selectedOrder.customerDetails?.email}</span></p>
+                                <p className="text-lg font-semibold">District/Tehseel: <span className="font-normal text-gray-600">{selectedOrder.customerDetails?.province}</span></p>
                                 <p className="text-lg font-semibold">Phone: <span className="font-normal text-gray-600">{selectedOrder.customerDetails?.phoneNumber}</span></p>
                                 <p className="text-lg font-semibold">Address: <span className="font-normal text-gray-600">{selectedOrder.customerDetails?.address}, {selectedOrder.customerDetails?.city}, {selectedOrder.customerDetails?.postalCode}</span></p>
                                 <p className="text-lg font-semibold">Total Amount: <span className="font-normal text-green-600">PKR {selectedOrder.totalAmount.toFixed(2)}</span></p>
