@@ -10,7 +10,7 @@ import {
     query,
     orderBy,
 } from "firebase/firestore";
-import { FaTrash, FaPen, FaUpload, FaPlus, FaTimes, FaBars, FaSpinner, FaFilter } from "react-icons/fa";
+import { FaTrash, FaPen, FaUpload, FaPlus, FaTimes, FaBars, FaSpinner, FaFilter, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { FiDollarSign, FiCalendar, FiShoppingCart } from "react-icons/fi";
 import { motion } from "framer-motion";
 import { db, auth } from "../../lib/firebase";
@@ -52,6 +52,51 @@ const cleanDataForFirestore = (data) => {
     return data;
 };
 
+// Fabric names data organized by category
+const FABRIC_NAMES = {
+    ladiesSummer: [
+        "Lawn",
+        "Cotton / Cotton Cambric",
+        "Voile",
+        "Linen",
+        "Khadi",
+        "Silk (Light silk / Mulmul silk)",
+        "Muslin",
+        "Chiffon",
+        "Organza (for festive / party wear)",
+        "Net",
+        "Georgette",
+        "Printed / Digital Print (on lawn, cotton, silks)",
+        "Khaddar"
+    ],
+    ladiesWinter: [
+        "Polo Cotton",
+        "Khaddar",
+        "Wool / Wool blend",
+        "Pashmina",
+        "Velvet",
+        "Marina",
+        "Jacquard",
+        "Karandi",
+        "Woolen shawl material",
+        "Embroidered Khaddar",
+        "Corduroy",
+        "Tweed",
+        "Fleece (for linings ya ghar ke kapray)"
+    ],
+    mens: [
+        "Cotton",
+        "Soft Cotton",
+        "Hard Cotton",
+        "Wash & Wear",
+        "Boski",
+        "Latha",
+        "Malai Boski (premium, soft touch)",
+        "Egyptian Cotton",
+        "Linen"
+    ]
+};
+
 export default function Dashboard() {
     const [activeTab, setActiveTab] = useState("home");
     const [products, setProducts] = useState([]);
@@ -65,6 +110,8 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(false);
     const [newStatus, setNewStatus] = useState("");
     const [isAdmin, setIsAdmin] = useState(false);
+    const [showFabricDropdown, setShowFabricDropdown] = useState(false);
+    const [fabricSearch, setFabricSearch] = useState("");
 
     const initialOrderCountRef = useRef(0);
     const [orderSubTab, setOrderSubTab] = useState("pending");
@@ -114,6 +161,7 @@ export default function Dashboard() {
         price: "",
         description: "",
         collection: "",
+        fabric: "",
         variants: [],
     });
 
@@ -128,6 +176,43 @@ export default function Dashboard() {
             setFilteredProducts(products.filter(product => product.collection === selectedCollection));
         }
     }, [products, selectedCollection]);
+
+    // Get appropriate fabric names based on selected collection
+    const getFabricOptions = () => {
+        const collection = newProduct.collection?.toLowerCase() || "";
+        
+        if (collection.includes("womens") || collection.includes("ladies")) {
+            if (collection.includes("summer")) {
+                return FABRIC_NAMES.ladiesSummer;
+            } else if (collection.includes("winter")) {
+                return FABRIC_NAMES.ladiesWinter;
+            }
+            return [...FABRIC_NAMES.ladiesSummer, ...FABRIC_NAMES.ladiesWinter];
+        } else if (collection.includes("mens") || collection.includes("men")) {
+            return FABRIC_NAMES.mens;
+        } else if (collection.includes("kids")) {
+            if (collection.includes("summer")) {
+                return FABRIC_NAMES.ladiesSummer.filter(fabric => 
+                    fabric.includes("Cotton") || fabric.includes("Linen") || fabric.includes("Voile")
+                );
+            } else if (collection.includes("winter")) {
+                return FABRIC_NAMES.ladiesWinter.filter(fabric => 
+                    fabric.includes("Wool") || fabric.includes("Fleece") || fabric.includes("Khaddar")
+                );
+            }
+            return [...FABRIC_NAMES.mens, ...FABRIC_NAMES.ladiesSummer.filter(fabric => 
+                fabric.includes("Cotton") || fabric.includes("Linen")
+            )];
+        }
+        
+        // Default: show all fabrics
+        return [...FABRIC_NAMES.ladiesSummer, ...FABRIC_NAMES.ladiesWinter, ...FABRIC_NAMES.mens];
+    };
+
+    // Filter fabric options based on search
+    const filteredFabricOptions = getFabricOptions().filter(fabric =>
+        fabric.toLowerCase().includes(fabricSearch.toLowerCase())
+    );
 
     // Fetch products and orders 
     const fetchProducts = async () => {
@@ -269,15 +354,18 @@ export default function Dashboard() {
             price: "",
             description: "",
             collection: "",
+            fabric: "",
             variants: [],
         });
         setImages([]);
         setVideo(null);
+        setShowFabricDropdown(false);
+        setFabricSearch("");
     };
 
     const addProduct = async () => {
-        if (!newProduct.title || !newProduct.price || !newProduct.collection) {
-            alert("Title, Price, and Collection are required.");
+        if (!newProduct.title || !newProduct.price || !newProduct.collection || !newProduct.fabric) {
+            alert("Title, Price, Collection, and Fabric are required.");
             return;
         }
         const priceValue = parseFloat(newProduct.price);
@@ -321,6 +409,7 @@ export default function Dashboard() {
             price: product.price,
             description: product.description,
             collection: product.collection,
+            fabric: product.fabric || "",
             variants: product.variants || [],
         });
         setImages(product.images?.map((url) => ({ url, isNew: false })) || []);
@@ -398,6 +487,13 @@ export default function Dashboard() {
     const removeVariant = (index) => {
         const updatedVariants = newProduct.variants.filter((_, i) => i !== index);
         setNewProduct((prev) => ({ ...prev, variants: updatedVariants }));
+    };
+
+    // Fabric selection handler
+    const handleFabricSelect = (fabric) => {
+        setNewProduct(prev => ({ ...prev, fabric }));
+        setShowFabricDropdown(false);
+        setFabricSearch("");
     };
 
     const getStatusBadge = (status) => {
@@ -583,32 +679,106 @@ export default function Dashboard() {
                             onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
                             disabled={loading}
                         />
-                        <select
-                            value={newProduct.collection || ""}
-                            onChange={(e) => setNewProduct({ ...newProduct, collection: e.target.value })}
-                            className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                            disabled={loading}
-                        >
-                            <option value="">Select Collection</option>
-                            <option value="Tracksuit">Tracksuit</option>
-                            <option value="Mens">Mens</option>
-                            <option value="Mens Summer Collection">Mens Summer Collection</option>
-                            <option value="Mens Winter Collection">Mens Winter Collection</option>
-                            <option value="Womens">Womens Collection</option>
-                            <option value="Womens Summer Collection">Womens Summer Collection</option>
-                            <option value="Womens Winter Collection">Womens Winter Collection</option>
-                            <option value="Kids Collection">Kids Collection</option>
-                            <option value="Kids Summer Collection">Kids Summer Collection</option>
-                            <option value="Kids Winter Collection">Kids Winter Collection</option>
-                            <option value="Bed Sheet">Bed Sheet</option>
-                            <option value="Blanket">Blanket</option>
-                            <option value="Mens Shawl">Mens Shawl</option>
-                        </select>
+                        
+                        {/* Collection Selection */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Collection *</label>
+                            <select
+                                value={newProduct.collection || ""}
+                                onChange={(e) => setNewProduct({ ...newProduct, collection: e.target.value, fabric: "" })}
+                                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                                disabled={loading}
+                                required
+                            >
+                                <option value="">Select Collection</option>
+                                <option value="Tracksuit">Tracksuit</option>
+                                <option value="Mens">Mens</option>
+                                <option value="Mens Summer Collection">Mens Summer Collection</option>
+                                <option value="Mens Winter Collection">Mens Winter Collection</option>
+                                <option value="Womens">Womens Collection</option>
+                                <option value="Womens Summer Collection">Womens Summer Collection</option>
+                                <option value="Womens Winter Collection">Womens Winter Collection</option>
+                                <option value="Kids Collection">Kids Collection</option>
+                                <option value="Kids Summer Collection">Kids Summer Collection</option>
+                                <option value="Kids Winter Collection">Kids Winter Collection</option>
+                                <option value="Bed Sheet">Bed Sheet</option>
+                                <option value="Blanket">Blanket</option>
+                                <option value="Mens Shawl">Mens Shawl</option>
+                            </select>
+                        </div>
+
+                        {/* Fabric Selection */}
+                        <div className="relative">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Fabric Type *
+                                <span className="text-xs text-gray-500 ml-2">(Required - Select from predefined options)</span>
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Select fabric type..."
+                                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors pr-10"
+                                    value={newProduct.fabric}
+                                    onChange={(e) => setNewProduct({ ...newProduct, fabric: e.target.value })}
+                                    onFocus={() => setShowFabricDropdown(true)}
+                                    disabled={loading}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    onClick={() => setShowFabricDropdown(!showFabricDropdown)}
+                                    disabled={loading}
+                                >
+                                    {showFabricDropdown ? <FaChevronUp /> : <FaChevronDown />}
+                                </button>
+                            </div>
+
+                            {showFabricDropdown && (
+                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                    {/* Search Input */}
+                                    <div className="p-2 border-b">
+                                        <input
+                                            type="text"
+                                            placeholder="Search fabrics..."
+                                            className="w-full p-2 border border-gray-300 rounded"
+                                            value={fabricSearch}
+                                            onChange={(e) => setFabricSearch(e.target.value)}
+                                        />
+                                    </div>
+                                    
+                                    {/* Fabric Options */}
+                                    <div className="py-1">
+                                        {filteredFabricOptions.length > 0 ? (
+                                            filteredFabricOptions.map((fabric, index) => (
+                                                <button
+                                                    key={index}
+                                                    type="button"
+                                                    className="w-full text-left px-4 py-2 hover:bg-indigo-50 transition-colors"
+                                                    onClick={() => handleFabricSelect(fabric)}
+                                                >
+                                                    {fabric}
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-4 py-2 text-gray-500">No fabrics found</div>
+                                        )}
+                                    </div>
+
+                                    {/* Collection-based hint */}
+                                    {newProduct.collection && (
+                                        <div className="p-2 bg-gray-50 border-t text-xs text-gray-600">
+                                            Showing fabrics suitable for: {newProduct.collection}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                         {/* Variants Section */}
                         <div>
                             <div className="flex justify-between items-center mb-3">
-                                <label className="text-lg font-semibold text-gray-700">Variants</label>
+                                <label className="text-lg font-semibold text-gray-700">Variants (Optional)</label>
                                 <button
                                     onClick={addVariant}
                                     className="bg-indigo-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-indigo-600 transition-colors duration-200 flex items-center gap-2"
@@ -703,7 +873,7 @@ export default function Dashboard() {
                             onClick={editingProduct ? saveEditProduct : addProduct}
                             className={`w-full text-white px-6 py-3 rounded-lg font-bold text-lg shadow-lg transition-colors duration-200 transform hover:scale-105 ${loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
                                 }`}
-                            disabled={loading}
+                            disabled={loading || !newProduct.title || !newProduct.price || !newProduct.collection || !newProduct.fabric}
                         >
                             {loading ? (
                                 <>
@@ -795,6 +965,14 @@ export default function Dashboard() {
                                                     {product.collection}
                                                 </span>
                                             </div>
+                                            {product.fabric && (
+                                                <div className="mb-3">
+                                                    <p className="text-sm font-semibold text-gray-700">Fabric:</p>
+                                                    <span className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                                        {product.fabric}
+                                                    </span>
+                                                </div>
+                                            )}
                                             {product.variants && product.variants.length > 0 && (
                                                 <div className="mt-3">
                                                     <p className="text-sm font-semibold text-gray-700 mb-1">Variants:</p>

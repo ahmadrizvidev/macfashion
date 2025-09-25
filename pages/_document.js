@@ -7,6 +7,7 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        <title>MecStore</title>
         {/* Google Analytics */}
         <script
           async

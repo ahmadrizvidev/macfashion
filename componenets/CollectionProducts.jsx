@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { db } from "../lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, limit } from "firebase/firestore";
 import { FaStar, FaSpinner } from "react-icons/fa";
 
+// Memoized price formatter
 const formatPrice = (price) => {
   return new Intl.NumberFormat("en-PK", {
     style: "currency",
@@ -16,131 +17,219 @@ const formatPrice = (price) => {
   }).format(price);
 };
 
-const getReviewsForProduct = async (productId) => {
-  const reviewsCollectionRef = collection(db, "reviews");
-  const q = query(reviewsCollectionRef, where("productId", "==", productId));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.length;
+// Preload images for better performance
+const preloadImage = (src) => {
+  if (typeof window !== 'undefined' && src) {
+    const img = new window.Image();
+    img.src = src;
+  }
 };
 
-const fetchProductsWithReviews = async (productsSnapshot) => {
-  const productsList = productsSnapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+// Function to get actual reviews count for a product
+const getReviewsCount = async (productId) => {
+  try {
+    const reviewsRef = collection(db, "reviews");
+    const q = query(reviewsRef, where("productId", "==", productId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.size;
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+    return 0;
+  }
+};
 
-  const productsWithReviews = await Promise.all(
-    productsList.map(async (product) => {
-      const reviewCount = await getReviewsForProduct(product.id);
-      return { ...product, reviewsCount: reviewCount };
-    })
-  );
-  return productsWithReviews;
+// Batch fetch reviews for all products to reduce Firestore reads
+const fetchReviewsForProducts = async (products) => {
+  try {
+    // Get all product IDs
+    const productIds = products.map(product => product.id);
+    
+    // Fetch all reviews for these product IDs in a single query
+    const reviewsRef = collection(db, "reviews");
+    const q = query(reviewsRef, where("productId", "in", productIds));
+    const querySnapshot = await getDocs(q);
+    
+    // Count reviews per product
+    const reviewsCountMap = {};
+    querySnapshot.forEach((doc) => {
+      const review = doc.data();
+      if (review.productId) {
+        reviewsCountMap[review.productId] = (reviewsCountMap[review.productId] || 0) + 1;
+      }
+    });
+    
+    return reviewsCountMap;
+  } catch (error) {
+    console.error("Error batch fetching reviews:", error);
+    return {};
+  }
 };
 
 export default function CollectionProducts({ collectionName }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      if (!collectionName) {
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const colRef = collection(db, "products");
-        const q = query(colRef, where("collection", "==", collectionName));
-        const snapshot = await getDocs(q);
-        const productsWithReviews = await fetchProductsWithReviews(snapshot);
-        setProducts(productsWithReviews.slice(0, 6));
-      } catch (err) {
-        console.error(`Failed to fetch products for ${collectionName}:`, err);
-        setProducts([]);
-      }
+  // Optimized product fetcher with actual reviews
+  const fetchProducts = useCallback(async () => {
+    if (!collectionName) {
       setLoading(false);
-    };
+      return;
+    }
 
-    fetchProducts();
+    setLoading(true);
+    try {
+      const colRef = collection(db, "products");
+      const q = query(
+        colRef, 
+        where("collection", "==", collectionName),
+        limit(6)
+      );
+      
+      const snapshot = await getDocs(q);
+      const productsList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        reviewsCount: 0 // Initialize with 0, will be updated
+      }));
+
+      // Fetch actual reviews count for all products in batch
+      const reviewsCountMap = await fetchReviewsForProducts(productsList);
+      
+      // Update products with actual review counts
+      const productsWithReviews = productsList.map(product => ({
+        ...product,
+        reviewsCount: reviewsCountMap[product.id] || 0
+      }));
+
+      setProducts(productsWithReviews);
+      
+      // Preload images in background
+      productsWithReviews.forEach(product => {
+        if (product.images?.[0]) {
+          preloadImage(product.images[0]);
+        }
+      });
+    } catch (err) {
+      console.error(`Failed to fetch products for ${collectionName}:`, err);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
   }, [collectionName]);
 
+  useEffect(() => {
+    let mounted = true;
+    
+    const loadData = async () => {
+      if (mounted) {
+        await fetchProducts();
+      }
+    };
+
+    const timer = setTimeout(loadData, 50);
+    
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
+  }, [fetchProducts]);
+
+  // Show skeleton loader instead of spinner for better UX
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-16">
-        <FaSpinner className="animate-spin text-indigo-600 text-5xl" />
-      </div>
+      <section className="w-full py-12 bg-gray-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center mb-8">
+            <div className="h-10 bg-gray-200 rounded-lg w-64 animate-pulse"></div>
+            <div className="h-6 bg-gray-200 rounded w-24 animate-pulse"></div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 md:gap-8">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl shadow-sm overflow-hidden animate-pulse">
+                <div className="w-full aspect-[3/4] bg-gray-200"></div>
+                <div className="p-4">
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                  <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
     );
   }
 
+  if (products.length === 0) {
+    return null;
+  }
+
   return (
-    <section className="w-[100vw] py-12 bg-gray-50 overflow-x-hidden">
+    <section className="w-full py-8 bg-gray-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 capitalize">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 capitalize">
             {collectionName}
           </h2>
           <Link
-            href={`/collections/${collectionName.toLowerCase().replace(/\s/g, '-')}`}
-            className="text-indigo-600 font-semibold hover:text-indigo-800 transition duration-300"
+            href={`/collections/${collectionName.toLowerCase().replace(/\s+/g, '-')}`}
+            className="text-indigo-600 font-semibold hover:text-indigo-800 transition duration-200 text-sm md:text-base"
+            prefetch={false}
           >
-            Shop All &rarr;
+            View All →
           </Link>
         </div>
 
-        {products.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 md:gap-8">
-            {products.map((product) => (
-              <Link
-                key={product.id}
-                href={`/product/${product.id}`}
-                className="block group"
-              >
-                <div className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col h-full">
-                  <div className="relative w-full aspect-[3/4] overflow-hidden">
-                    <Image
-                      src={product.images?.[0] || "/placeholder.png"}
-                      alt={product.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 768px) 50vw, 33vw"
-                    />
-                  </div>
-                  <div className="p-4 flex flex-col flex-grow">
-                    <h3 className="text-lg font-semibold text-gray-800 line-clamp-2">
-                      {product.title}
-                    </h3>
-                    <div className="flex-grow flex flex-col justify-end mt-2">
-                      <div className="flex items-center text-gray-500 text-sm">
-                        <FaStar className="text-yellow-400 mr-1" />
-                        <span>
-                          {product.reviewsCount > 0
-                            ? `${product.reviewsCount} reviews`
-                            : "No reviews yet"}
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-6">
+          {products.map((product, index) => (
+            <Link
+              key={product.id}
+              href={`/product/${product.id}`}
+              className="block group"
+              prefetch={false}
+            >
+              <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col h-full">
+                <div className="relative w-full aspect-[3/4] overflow-hidden">
+                  <Image
+                    src={product.images?.[0] || "/placeholder.png"}
+                    alt={product.title || "Product image"}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    sizes="(max-width: 480px) 50vw, (max-width: 768px) 33vw, 25vw"
+                    priority={index < 2}
+                  />
+                </div>
+                <div className="p-3 flex flex-col flex-grow">
+                  <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight">
+                    {product.title}
+                  </h3>
+                  <div className="flex-grow flex flex-col justify-end mt-2">
+                    <div className="flex items-center text-gray-500 text-xs mb-1">
+                      <FaStar className="text-yellow-400 mr-1" />
+                      <span>
+                        {product.reviewsCount === 0 
+                          ? "No reviews yet" 
+                          : `${product.reviewsCount} review${product.reviewsCount !== 1 ? 's' : ''}`
+                        }
+                      </span>
+                    </div>
+                    <div className="flex items-baseline space-x-1">
+                      {product.oldPrice && (
+                        <span className="line-through text-gray-400 font-medium text-xs">
+                          {formatPrice(product.oldPrice)}
                         </span>
-                      </div>
-                      <div className="mt-2 flex items-baseline space-x-2">
-                        {product.oldPrice && (
-                          <span className="line-through text-gray-400 font-medium text-sm">
-                            {formatPrice(product.oldPrice)}
-                          </span>
-                        )}
-                        <span className="text-red-600 font-extrabold text-lg">
-                          {formatPrice(product.price)}
-                        </span>
-                      </div>
+                      )}
+                      <span className="text-red-600 font-bold text-base">
+                        {formatPrice(product.price)}
+                      </span>
                     </div>
                   </div>
                 </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-gray-500 py-10">
-            No products found for this collection.
-          </p>
-        )}
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     </section>
   );

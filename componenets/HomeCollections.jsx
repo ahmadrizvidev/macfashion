@@ -10,6 +10,16 @@ export default function HomeCollections() {
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Define the specific collection order
+  const collectionOrder = [
+    "Mens Winter Collection",
+    "Mens Summer Collection", 
+    "Womens Winter Collection",
+    "Womens Summer Collection",
+    "Tracksuit",
+    "Mens Shawl"
+  ];
+
   useEffect(() => {
     const fetchCollections = async () => {
       setLoading(true);
@@ -24,8 +34,28 @@ export default function HomeCollections() {
 
         // Use a Set to get only unique, non-empty collection names
         const uniqueCollections = [...new Set(allCollectionNames)];
-        
-        setCollections(uniqueCollections);
+
+        // Sort collections according to the specific order
+        const sortedCollections = uniqueCollections.sort((a, b) => {
+          const indexA = collectionOrder.indexOf(a);
+          const indexB = collectionOrder.indexOf(b);
+          
+          // If both are in the predefined order, sort by that order
+          if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+          }
+          
+          // If only A is in predefined order, it comes first
+          if (indexA !== -1) return -1;
+          
+          // If only B is in predefined order, it comes first  
+          if (indexB !== -1) return 1;
+          
+          // If neither are in predefined order, sort alphabetically
+          return a.localeCompare(b);
+        });
+
+        setCollections(sortedCollections);
       } catch (err) {
         console.error("Failed to fetch collections:", err);
       } finally {
