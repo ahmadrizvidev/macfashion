@@ -70,6 +70,8 @@ const FABRIC_NAMES = {
         "Khaddar"
     ],
     ladiesWinter: [
+        "Silk",
+        "Lilan",
         "Polo Cotton",
         "Khaddar",
         "Wool / Wool blend",
