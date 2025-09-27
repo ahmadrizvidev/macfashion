@@ -60,7 +60,7 @@ const FABRIC_NAMES = {
         "Voile",
         "Linen",
         "Khadi",
-        "Silk (Light silk / Mulmul silk)",
+        "Silk",
         "Muslin",
         "Chiffon",
         "Organza (for festive / party wear)",
