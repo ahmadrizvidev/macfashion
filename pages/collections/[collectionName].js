@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../lib/firebase";
 import Image from "next/image";
 
-const PRODUCTS_PER_PAGE = 6;
+const PRODUCTS_PER_PAGE = 12;
 
 // Collections that don't have fabric filters - use exact names
 const NON_FABRIC_COLLECTIONS = ["Tracksuit", "Bed Sheet", "Mens Shawl"];
