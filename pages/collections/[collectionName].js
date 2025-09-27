@@ -20,6 +20,9 @@ import Image from "next/image";
 
 const PRODUCTS_PER_PAGE = 6;
 
+// Collections that don't have fabric filters
+const NON_FABRIC_COLLECTIONS = ["tracksuit", "bed-sheet", "mens-shawl"];
+
 // Fabric names data organized by collection type
 const FABRIC_NAMES = {
   mensSummer: ["Cotton", "Soft Cotton", "Wash & Wear", "Boski", "Linen"],
@@ -71,16 +74,16 @@ const OptimizedImage = ({ src, alt, className }) => {
 // Smart Pagination Component
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const getVisiblePages = () => {
-    if (totalPages <= 7) {
+    if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
 
-    if (currentPage <= 4) {
-      return [1, 2, 3, 4, 5, '...', totalPages];
+    if (currentPage <= 3) {
+      return [1, 2, 3, 4, '...', totalPages];
     }
 
-    if (currentPage >= totalPages - 3) {
-      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    if (currentPage >= totalPages - 2) {
+      return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
     }
 
     return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
@@ -89,19 +92,19 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-12">
-      <div className="text-sm text-gray-600">
-        Showing page {currentPage} of {totalPages}
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-8">
+      <div className="text-sm text-gray-600 whitespace-nowrap">
+        Page {currentPage} of {totalPages}
       </div>
       
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl border border-gray-200"
+          className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl border border-gray-200 text-sm"
         >
-          <FaChevronLeft className="text-sm" />
-          Previous
+          <FaChevronLeft className="text-xs sm:text-sm" />
+          <span className="hidden sm:inline">Previous</span>
         </button>
 
         <div className="flex gap-1">
@@ -110,7 +113,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
               key={index}
               onClick={() => typeof page === 'number' && onPageChange(page)}
               disabled={page === '...'}
-              className={`w-10 h-10 rounded-full font-semibold transition-all duration-300 ${
+              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full font-semibold transition-all duration-300 text-sm sm:text-base ${
                 currentPage === page
                   ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg transform scale-110"
                   : page === '...'
@@ -126,15 +129,15 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl border border-gray-200"
+          className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl border border-gray-200 text-sm"
         >
-          Next
-          <FaChevronRight className="text-sm" />
+          <span className="hidden sm:inline">Next</span>
+          <FaChevronRight className="text-xs sm:text-sm" />
         </button>
       </div>
 
-      <div className="text-sm text-gray-600">
-        Total {totalPages} pages
+      <div className="text-sm text-gray-600 whitespace-nowrap hidden sm:block">
+        {totalPages} pages total
       </div>
     </div>
   );
@@ -154,12 +157,28 @@ export default function CollectionDetailPage() {
   const [selectedFabric, setSelectedFabric] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Check if current collection is a non-fabric collection
+  const isNonFabricCollection = useMemo(() => {
+    return NON_FABRIC_COLLECTIONS.some(nonFabric => 
+      collectionName.toLowerCase().includes(nonFabric.toLowerCase())
+    );
+  }, [collectionName]);
+
+  // Reset filters when collection changes
+  useEffect(() => {
+    setSelectedFabric("all");
+    setSearchQuery("");
+    setCurrentPage(1);
+    setSortOrder("lowToHigh");
+  }, [collectionName]);
+
   // Group products by fabric and filter out empty/undefined fabrics
   const productsByFabric = useMemo(() => {
+    if (isNonFabricCollection) return {};
+    
     const grouped = {};
     
     allProducts.forEach(product => {
-      // Filter out products with empty, undefined, or "Uncategorized" fabric
       const fabric = product.fabric?.trim() || "";
       if (!fabric || fabric.toLowerCase() === "uncategorized") return;
       
@@ -169,32 +188,34 @@ export default function CollectionDetailPage() {
       grouped[fabric].push(product);
     });
     
-    // Sort fabrics by product count (descending)
     return Object.fromEntries(
       Object.entries(grouped).sort(([,a], [,b]) => b.length - a.length)
     );
-  }, [allProducts]);
+  }, [allProducts, isNonFabricCollection]);
 
   // Get available fabrics (excluding empty/uncategorized)
   const availableFabrics = useMemo(() => {
+    if (isNonFabricCollection) return [];
     return Object.keys(productsByFabric).filter(fabric => 
       fabric && fabric.toLowerCase() !== "uncategorized"
     );
-  }, [productsByFabric]);
+  }, [productsByFabric, isNonFabricCollection]);
 
   // Get products with valid fabric for "All Fabrics" view
   const productsWithValidFabric = useMemo(() => {
+    if (isNonFabricCollection) return allProducts;
+    
     return allProducts.filter(product => {
       const fabric = product.fabric?.trim() || "";
       return fabric && fabric.toLowerCase() !== "uncategorized";
     });
-  }, [allProducts]);
+  }, [allProducts, isNonFabricCollection]);
 
   // Filter products based on search and fabric
   const filteredProducts = useMemo(() => {
-    let filtered = selectedFabric === "all" ? productsWithValidFabric : allProducts;
+    let filtered = isNonFabricCollection ? allProducts : productsWithValidFabric;
 
-    if (selectedFabric !== "all") {
+    if (!isNonFabricCollection && selectedFabric !== "all") {
       filtered = filtered.filter(product => 
         product.fabric === selectedFabric
       );
@@ -214,7 +235,7 @@ export default function CollectionDetailPage() {
       const priceB = parseFloat(b.price || 0);
       return sortOrder === "lowToHigh" ? priceA - priceB : priceB - priceA;
     });
-  }, [allProducts, productsWithValidFabric, searchQuery, selectedFabric, sortOrder]);
+  }, [allProducts, productsWithValidFabric, searchQuery, selectedFabric, sortOrder, isNonFabricCollection]);
 
   // Paginated products
   const paginatedProducts = useMemo(() => {
@@ -269,7 +290,6 @@ export default function CollectionDetailPage() {
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    // Smooth scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -306,9 +326,7 @@ export default function CollectionDetailPage() {
           <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
             {collectionName}
           </h1>
-          <p className="text-lg text-gray-600 mb-6">
-            Discover {productsWithValidFabric.length} premium products across {availableFabrics.length} fabrics
-          </p>
+       
 
           {/* Search Bar */}
           <div className="max-w-md mx-auto relative mb-6">
@@ -316,7 +334,10 @@ export default function CollectionDetailPage() {
               <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search products or fabrics..."
+                placeholder={isNonFabricCollection 
+                  ? `Search ${collectionName.toLowerCase()} products...` 
+                  : "Search products or fabrics..."
+                }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-12 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
@@ -333,39 +354,41 @@ export default function CollectionDetailPage() {
           </div>
         </motion.div>
 
-        {/* Fabric Filter Chips */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mb-8"
-        >
-          <div className="flex flex-wrap gap-3 justify-center">
-            <button
-              onClick={() => setSelectedFabric("all")}
-              className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${
-                selectedFabric === "all"
-                  ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-blue-200"
-                  : "bg-white text-gray-700 hover:bg-gray-50 shadow-gray-200"
-              }`}
-            >
-              All Fabrics ({availableFabrics.length})
-            </button>
-            {availableFabrics.map((fabric) => (
+        {/* Fabric Filter Chips - Only show for fabric collections */}
+        {!isNonFabricCollection && availableFabrics.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="mb-8"
+          >
+            <div className="flex flex-wrap gap-3 justify-center">
               <button
-                key={fabric}
-                onClick={() => setSelectedFabric(fabric)}
-                className={`px-5 py-2.5 rounded-full font-medium transition-all duration-300 transform hover:scale-105 shadow-lg ${
-                  selectedFabric === fabric
+                onClick={() => setSelectedFabric("all")}
+                className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${
+                  selectedFabric === "all"
                     ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-blue-200"
                     : "bg-white text-gray-700 hover:bg-gray-50 shadow-gray-200"
                 }`}
               >
-                {fabric} ({productsByFabric[fabric]?.length || 0})
+                All Fabrics ({availableFabrics.length})
               </button>
-            ))}
-          </div>
-        </motion.div>
+              {availableFabrics.map((fabric) => (
+                <button
+                  key={fabric}
+                  onClick={() => setSelectedFabric(fabric)}
+                  className={`px-5 py-2.5 rounded-full font-medium transition-all duration-300 transform hover:scale-105 shadow-lg ${
+                    selectedFabric === fabric
+                      ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-blue-200"
+                      : "bg-white text-gray-700 hover:bg-gray-50 shadow-gray-200"
+                  }`}
+                >
+                  {fabric} ({productsByFabric[fabric]?.length || 0})
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Active Filters */}
         {(selectedFabric !== "all" || searchQuery) && (
@@ -376,7 +399,7 @@ export default function CollectionDetailPage() {
           >
             <span className="text-sm text-gray-600">Active filters:</span>
             <div className="flex flex-wrap gap-2">
-              {selectedFabric !== "all" && (
+              {!isNonFabricCollection && selectedFabric !== "all" && (
                 <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
                   Fabric: {selectedFabric}
                   <button onClick={() => setSelectedFabric("all")}>
@@ -398,87 +421,16 @@ export default function CollectionDetailPage() {
 
         {/* Products Display */}
         <AnimatePresence mode="wait">
-          {selectedFabric === "all" ? (
-            // All Fabrics View - Show 3 products per fabric
+          {isNonFabricCollection || selectedFabric === "all" ? (
+            // All Products View - For non-fabric collections or "All Fabrics" view
             <motion.div
-              key="all-fabrics"
+              key="all-products"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-12"
             >
-              {availableFabrics.length > 0 ? (
-                availableFabrics.map((fabric, fabricIndex) => {
-                  const fabricProducts = productsByFabric[fabric] || [];
-                  const displayProducts = fabricProducts.slice(0, 3);
-
-                  return (
-                    <motion.section
-                      key={fabric}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: fabricIndex * 0.1 }}
-                      className="bg-white rounded-3xl shadow-xl p-6 lg:p-8"
-                    >
-                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
-                        <div>
-                          <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                            {fabric} Collection
-                          </h2>
-                          <p className="text-gray-600">
-                            {fabricProducts.length} premium products available
-                          </p>
-                        </div>
-                        {fabricProducts.length > 3 && (
-                          <button
-                            onClick={() => setSelectedFabric(fabric)}
-                            className="mt-4 lg:mt-0 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-full font-semibold hover:from-blue-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2"
-                          >
-                            <FaExpand />
-                            View All {fabricProducts.length} Products
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {displayProducts.map((product, index) => (
-                          <motion.div
-                            key={product.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="group cursor-pointer bg-gray-50 rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
-                            onClick={() => handleCardClick(product.id)}
-                          >
-                            <div className="relative w-full aspect-[3/4] overflow-hidden">
-                              <OptimizedImage
-                                src={product.images?.[0]}
-                                alt={product.title}
-                                className="object-cover group-hover:scale-110 transition-transform duration-700"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                              <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                                <span className="text-sm font-medium bg-blue-500 px-2 py-1 rounded">
-                                  View Details
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="p-4">
-                              <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
-                                {product.title}
-                              </h3>
-                              <p className="text-2xl font-bold text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text">
-                                PKR {parseFloat(product.price || 0).toLocaleString()}
-                              </p>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </motion.section>
-                  );
-                })
-              ) : (
+              {/* Products Grid with Pagination */}
+              {filteredProducts.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -489,9 +441,79 @@ export default function CollectionDetailPage() {
                     No Products Found
                   </h3>
                   <p className="text-gray-500 mb-6">
-                    No products with valid fabric information found in this collection.
+                    {searchQuery 
+                      ? `No products found matching "${searchQuery}"`
+                      : `No products found in ${collectionName} collection.`
+                    }
                   </p>
+                  <button
+                    onClick={clearFilters}
+                    className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-8 py-3 rounded-full font-semibold hover:from-blue-600 hover:to-purple-600 transition-all duration-300"
+                  >
+                    Clear Filters
+                  </button>
                 </motion.div>
+              ) : (
+                <>
+                  {/* Sort Options */}
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="text-gray-600">
+                      Showing {filteredProducts.length} products
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setSortOrder(sortOrder === "lowToHigh" ? "highToLow" : "lowToHigh")}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-gray-700 hover:bg-gray-50 transition-all duration-300 shadow-lg border border-gray-200"
+                      >
+                        {sortOrder === "lowToHigh" ? <FaSortAmountDown /> : <FaSortAmountUp />}
+                        Price {sortOrder === "lowToHigh" ? "Low to High" : "High to Low"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    {paginatedProducts.map((product, index) => (
+                      <motion.div
+                        key={product.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="group cursor-pointer bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
+                        onClick={() => handleCardClick(product.id)}
+                      >
+                        <div className="relative w-full aspect-[3/4] overflow-hidden">
+                          <OptimizedImage
+                            src={product.images?.[0]}
+                            alt={product.title}
+                            className="object-cover group-hover:scale-110 transition-transform duration-700"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+
+                        <div className="p-4">
+                          <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
+                            {product.title}
+                          </h3>
+                          <p className="text-2xl font-bold text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text">
+                            PKR {parseFloat(product.price || 0).toLocaleString()}
+                          </p>
+                          {!isNonFabricCollection && product.fabric && (
+                            <p className="text-sm text-gray-600 mt-1">
+                              Fabric: {product.fabric}
+                            </p>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Smart Pagination */}
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </>
               )}
             </motion.div>
           ) : (
@@ -503,14 +525,14 @@ export default function CollectionDetailPage() {
               exit={{ opacity: 0 }}
             >
               {/* Single Fabric Header */}
-                <div className="flex gap-2 items-center justify-center mb-5">
-                        <button
-                      onClick={() => setSelectedFabric("all")}
-                      className="bg-gray-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-700 transition-all duration-300"
-                    >
-                      Back to All Fabrics
-                    </button>
-                    </div>
+              <div className="flex gap-2 items-center justify-center mb-5">
+                <button
+                  onClick={() => setSelectedFabric("all")}
+                  className="bg-gray-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-700 transition-all duration-300"
+                >
+                  Back to All Fabrics
+                </button>
+              </div>
 
               {/* Products Grid */}
               {filteredProducts.length === 0 ? (
