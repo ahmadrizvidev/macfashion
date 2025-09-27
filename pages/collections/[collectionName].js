@@ -20,16 +20,8 @@ import Image from "next/image";
 
 const PRODUCTS_PER_PAGE = 6;
 
-// Collections that don't have fabric filters
-const NON_FABRIC_COLLECTIONS = ["tracksuit", "bed-sheet", "mens-shawl"];
-
-// Fabric names data organized by collection type
-const FABRIC_NAMES = {
-  mensSummer: ["Cotton", "Soft Cotton", "Wash & Wear", "Boski", "Linen"],
-  mensWinter: ["Cotton", "Wool Blend", "Velvet", "Corduroy"],
-  womensSummer: ["Lawn", "Cotton", "Linen", "Silk", "Chiffon"],
-  womensWinter: ["Khaddar", "Wool", "Velvet", "Tweed"]
-};
+// Collections that don't have fabric filters - use exact names
+const NON_FABRIC_COLLECTIONS = ["Tracksuit", "Bed Sheet", "Mens Shawl"];
 
 const fromUrl = (str) =>
   str.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -157,10 +149,13 @@ export default function CollectionDetailPage() {
   const [selectedFabric, setSelectedFabric] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Check if current collection is a non-fabric collection
+  // Check if current collection is a non-fabric collection - FIXED LOGIC
   const isNonFabricCollection = useMemo(() => {
+    // Convert both to lowercase for case-insensitive comparison
+    const currentCollection = collectionName.toLowerCase().trim();
+    
     return NON_FABRIC_COLLECTIONS.some(nonFabric => 
-      collectionName.toLowerCase().includes(nonFabric.toLowerCase())
+      currentCollection === nonFabric.toLowerCase().trim()
     );
   }, [collectionName]);
 
@@ -211,7 +206,7 @@ export default function CollectionDetailPage() {
     });
   }, [allProducts, isNonFabricCollection]);
 
-  // Filter products based on search and fabric
+  // Filter products based on search and fabric - FIXED SORTING
   const filteredProducts = useMemo(() => {
     let filtered = isNonFabricCollection ? allProducts : productsWithValidFabric;
 
@@ -229,10 +224,12 @@ export default function CollectionDetailPage() {
       );
     }
 
-    // Sort products
-    return filtered.sort((a, b) => {
-      const priceA = parseFloat(a.price || 0);
-      const priceB = parseFloat(b.price || 0);
+    // FIXED: Proper price sorting with safe number conversion
+    return [...filtered].sort((a, b) => {
+      // Safely convert prices to numbers, default to 0 if invalid
+      const priceA = parseFloat(a.price) || 0;
+      const priceB = parseFloat(b.price) || 0;
+      
       return sortOrder === "lowToHigh" ? priceA - priceB : priceB - priceA;
     });
   }, [allProducts, productsWithValidFabric, searchQuery, selectedFabric, sortOrder, isNonFabricCollection]);
@@ -277,6 +274,25 @@ export default function CollectionDetailPage() {
 
     if (collectionName) fetchCollectionProducts();
   }, [collectionName]);
+
+  // Debug logging to check collection detection - FIXED: Moved after availableFabrics declaration
+  useEffect(() => {
+    console.log('Collection Name:', collectionName);
+    console.log('Is Non-Fabric Collection:', isNonFabricCollection);
+    console.log('Available Fabrics:', availableFabrics);
+    console.log('All Products Count:', allProducts.length);
+    console.log('Filtered Products Count:', filteredProducts.length);
+    console.log('Sort Order:', sortOrder);
+    
+    // Debug price sorting
+    if (filteredProducts.length > 0) {
+      console.log('Sample prices:', filteredProducts.slice(0, 3).map(p => ({
+        title: p.title,
+        price: p.price,
+        parsedPrice: parseFloat(p.price) || 0
+      })));
+    }
+  }, [collectionName, isNonFabricCollection, availableFabrics, allProducts, filteredProducts, sortOrder]);
 
   const handleCardClick = (productId) => {
     router.push(`/product/${productId}`);
@@ -326,7 +342,12 @@ export default function CollectionDetailPage() {
           <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
             {collectionName}
           </h1>
-       
+          <p className="text-lg text-gray-600 mb-6">
+            {isNonFabricCollection 
+              ? `Discover ${allProducts.length} premium ${collectionName.toLowerCase()} products`
+              : `Discover ${productsWithValidFabric.length} premium products across ${availableFabrics.length} fabrics`
+            }
+          </p>
 
           {/* Search Bar */}
           <div className="max-w-md mx-auto relative mb-6">
@@ -429,6 +450,22 @@ export default function CollectionDetailPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
+              {/* Sort Options */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+                <div className="text-gray-600">
+                  Showing {filteredProducts.length} products
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setSortOrder(sortOrder === "lowToHigh" ? "highToLow" : "lowToHigh")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-gray-700 hover:bg-gray-50 transition-all duration-300 shadow-lg border border-gray-200"
+                  >
+                    {sortOrder === "lowToHigh" ? <FaSortAmountDown /> : <FaSortAmountUp />}
+                    Price {sortOrder === "lowToHigh" ? "Low to High" : "High to Low"}
+                  </button>
+                </div>
+              </div>
+
               {/* Products Grid with Pagination */}
               {filteredProducts.length === 0 ? (
                 <motion.div
@@ -455,22 +492,6 @@ export default function CollectionDetailPage() {
                 </motion.div>
               ) : (
                 <>
-                  {/* Sort Options */}
-                  <div className="flex justify-between items-center mb-6">
-                    <div className="text-gray-600">
-                      Showing {filteredProducts.length} products
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => setSortOrder(sortOrder === "lowToHigh" ? "highToLow" : "lowToHigh")}
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-gray-700 hover:bg-gray-50 transition-all duration-300 shadow-lg border border-gray-200"
-                      >
-                        {sortOrder === "lowToHigh" ? <FaSortAmountDown /> : <FaSortAmountUp />}
-                        Price {sortOrder === "lowToHigh" ? "Low to High" : "High to Low"}
-                      </button>
-                    </div>
-                  </div>
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                     {paginatedProducts.map((product, index) => (
                       <motion.div
@@ -532,6 +553,22 @@ export default function CollectionDetailPage() {
                 >
                   Back to All Fabrics
                 </button>
+              </div>
+
+              {/* Sort Options for Single Fabric View */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+                <div className="text-gray-600">
+                  Showing {filteredProducts.length} products in {selectedFabric}
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setSortOrder(sortOrder === "lowToHigh" ? "highToLow" : "lowToHigh")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-gray-700 hover:bg-gray-50 transition-all duration-300 shadow-lg border border-gray-200"
+                  >
+                    {sortOrder === "lowToHigh" ? <FaSortAmountDown /> : <FaSortAmountUp />}
+                    Price {sortOrder === "lowToHigh" ? "Low to High" : "High to Low"}
+                  </button>
+                </div>
               </div>
 
               {/* Products Grid */}
