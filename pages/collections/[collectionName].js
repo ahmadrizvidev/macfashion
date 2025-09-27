@@ -342,12 +342,7 @@ export default function CollectionDetailPage() {
           <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
             {collectionName}
           </h1>
-          <p className="text-lg text-gray-600 mb-6">
-            {isNonFabricCollection 
-              ? `Discover ${allProducts.length} premium ${collectionName.toLowerCase()} products`
-              : `Discover ${productsWithValidFabric.length} premium products across ${availableFabrics.length} fabrics`
-            }
-          </p>
+     
 
           {/* Search Bar */}
           <div className="max-w-md mx-auto relative mb-6">
