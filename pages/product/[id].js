@@ -1,3 +1,5 @@
+"use client";
+
 // components/ProductDetails.js
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
@@ -22,6 +24,7 @@ import {
   FiStar,
   FiX,
 } from "react-icons/fi";
+import AddToCartButton from "../../componenets/AddToCartButton";
 
 // FB Pixel functions
 import {
@@ -67,6 +70,7 @@ export default function ProductDetails() {
   const [comment, setComment] = useState("");
   const [showReviewPopup, setShowReviewPopup] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState([]);
+  const [relatedProductsLoading, setRelatedProductsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
   const [error, setError] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -118,7 +122,8 @@ export default function ProductDetails() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const prodData = docSnap.data();
-          setProduct(prodData);
+          // Add the id to the product data
+          setProduct({ ...prodData, id });
           if (prodData.collection) fetchRelatedProducts(prodData.collection);
           fetchReviews(id);
 
@@ -148,6 +153,7 @@ export default function ProductDetails() {
   const fetchRelatedProducts = async (collectionName) => {
     if (!collectionName) return;
     try {
+      setRelatedProductsLoading(true);
       const q = query(
         collection(db, "products"),
         where("collection", "==", collectionName)
@@ -160,6 +166,8 @@ export default function ProductDetails() {
       setRelatedProducts(related);
     } catch (err) {
       console.error("Failed to fetch related products:", err);
+    } finally {
+      setRelatedProductsLoading(false);
     }
   };
 
@@ -198,64 +206,6 @@ export default function ProductDetails() {
     } catch (err) {
       console.error("Failed to submit review:", err);
     }
-  };
-
-  // Add to cart
-  const addToCart = () => {
-    setError(null);
-    const hasCategoryVariants = product.variants?.some((v) => v.size);
-    const hasColorVariants = product.variants?.some((v) => v.color);
-
-    if (hasCategoryVariants && !selectedCategory) {
-      setError("Please select a size before adding to cart.");
-      return;
-    }
-    if (hasColorVariants && !selectedColor) {
-      setError("Please select a color before adding to cart.");
-      return;
-    }
-
-    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-
-    const productWithVariants = {
-      ...product,
-      id,
-      quantity: quantity,
-      selectedCategory,
-      selectedColor,
-    };
-
-    const existingItemIndex = cart.findIndex(
-      (item) =>
-        item.id === id &&
-        item.selectedColor === selectedColor &&
-        item.selectedCategory === selectedCategory
-    );
-
-    if (existingItemIndex !== -1) {
-      cart[existingItemIndex].quantity += quantity;
-    } else {
-      cart.push(productWithVariants);
-    }
-
-    localStorage.setItem("cart", JSON.stringify(cart));
-
-    // FB Pixel AddToCart
-    trackAddToCart(productWithVariants, quantity, selectedCategory, selectedColor);
-    if (typeof window !== "undefined" && window.fbq) {
-      window.fbq("track", "AddToCart", {
-        content_name: product.title,
-        content_ids: [id],
-        content_type: "product",
-        value: product.price * quantity,
-        currency: "PKR",
-        quantity,
-        category: selectedCategory,
-        color: selectedColor,
-      });
-    }
-
-    router.push("/cart");
   };
 
   // Buy Now
@@ -555,12 +505,30 @@ export default function ProductDetails() {
               >
                 <FiCreditCard /> Buy Now
               </button>
-              <button
-                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white px-8 py-4 rounded-lg hover:bg-indigo-500 transition-colors text-lg font-semibold shadow-lg"
-                onClick={addToCart}
-              >
-                <FiShoppingCart /> Add to Cart
-              </button>
+              <AddToCartButton
+                product={product}
+                selectedCategory={selectedCategory}
+                selectedColor={selectedColor}
+                quantity={quantity}
+                variant="default"
+                redirect={false}
+                className="flex-1"
+                onAddSuccess={() => {
+                  // Optional: Show success message or redirect
+                  console.log("Product added to cart successfully!");
+                  setError(null); // Clear any previous errors
+                }}
+                onAddError={(error) => {
+                  setError("Failed to add product to cart. Please try again.");
+                  console.error("Add to cart error:", error);
+                }}
+              />
+              
+              {/* Debug info - remove in production */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-xs text-gray-500 mt-0">
+                </div>
+              )}
               <button
                 className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-8 py-4 rounded-lg hover:bg-green-400 transition-colors text-lg font-semibold shadow-lg"
                 onClick={handleWhatsAppOrder}
@@ -611,17 +579,32 @@ export default function ProductDetails() {
       </div>
 
       {/* Related products */}
-      {relatedProducts.length > 0 && (
-        <div className="max-w-7xl mx-auto px-4 md:px-8 mt-12 md:mt-20">
-          <h3 className="text-2xl font-bold mb-6 text-gray-900">
-            Related Products
-          </h3>
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-12 md:mt-20">
+        <h3 className="text-2xl font-bold mb-6 text-gray-900">
+          Related Products
+        </h3>
+        
+        {relatedProductsLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="bg-white p-4 rounded-xl shadow animate-pulse">
+                <div className="w-full aspect-square bg-gray-200 rounded-lg mb-3"></div>
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+              </div>
+            ))}
+          </div>
+        ) : relatedProducts.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {relatedProducts.map((p) => (
               <div
                 key={p.id}
-                className="bg-white p-4 rounded-xl shadow hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => router.push(`/product/${p.id}`)}
+                className="bg-white p-4 rounded-xl shadow hover:shadow-md transition-all duration-300 cursor-pointer hover:scale-105"
+                onClick={() => {
+                  // Show loading state before navigation
+                  setRelatedProductsLoading(true);
+                  router.push(`/product/${p.id}`);
+                }}
               >
                 <div className="w-full aspect-square relative rounded-lg overflow-hidden">
                   <Image
@@ -636,8 +619,12 @@ export default function ProductDetails() {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <p>No related products found.</p>
+          </div>
+        )}
+      </div>
 
       {/* Review popup */}
       <AnimatePresence>

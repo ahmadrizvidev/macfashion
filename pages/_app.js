@@ -3,6 +3,7 @@ import Header from "../componenets/Navbar.jsx";
 import AnnouncementBar from "@/componenets/Announmentbar.jsx";
 import Footer from "@/componenets/footer.jsx";
 import WhatsappButton from "@/componenets/WhatsappButton.jsx";
+import { CartProvider } from "../context/CartContext.jsx";
 import { useRouter } from "next/router.js";
 import * as gtag from "../lib/gtag";
 import { useEffect } from "react";
@@ -26,12 +27,12 @@ export default function App({ Component, pageProps }) {
   }, [router.events]);
 
   return (
-    <>
+    <CartProvider>
       <AnnouncementBar />
       <Header />
       <Component {...pageProps} />
       <WhatsappButton />
       <Footer />
-    </>
+    </CartProvider>
   );
 }

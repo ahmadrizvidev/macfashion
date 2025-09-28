@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { useCart } from "../context/CartContext";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -14,10 +15,29 @@ export default function Header() {
   const [loading, setLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(null); // State for desktop dropdowns
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(null); // State for mobile dropdowns
+  const [cartCount, setCartCount] = useState(0);
   const router = useRouter();
   const searchRef = useRef(null);
+  const { getCartItemsCount, cartUpdateTrigger } = useCart();
 
   const toggleMenu = () => setMenuOpen(!menuOpen);
+
+  // Real-time cart count updates
+  useEffect(() => {
+    setCartCount(getCartItemsCount());
+  }, [cartUpdateTrigger, getCartItemsCount]);
+
+  // Listen for custom cart update events for cross-component real-time updates
+  useEffect(() => {
+    const handleCartUpdate = (event) => {
+      setCartCount(event.detail.itemCount || 0);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener('cartUpdated', handleCartUpdate);
+      return () => window.removeEventListener('cartUpdated', handleCartUpdate);
+    }
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -109,14 +129,17 @@ export default function Header() {
       <div className="bg-white">
         <div className="container mx-auto flex items-center justify-between p-4 sm:px-6 lg:px-8">
           <Link href="/" className="shrink-0">
-            <Image
-              src="/assets/logo.jpg"
-              alt="logo"
-              width={150}
-              height={40}
-              className="w-[150px] object-contain"
-              priority
-            />
+            <div className="flex items-center space-x-2">
+              <Image
+                src="/assets/logo.jpg"
+                alt="Macstore Logo"
+                width={40}
+                height={40}
+                className="w-10 h-10 rounded-lg object-cover"
+                priority
+              />
+              <span className="text-xl font-bold text-gray-800">Macstore</span>
+            </div>
           </Link>
 
           {/* Search Bar */}
@@ -178,9 +201,16 @@ export default function Header() {
 
           <div className="flex items-center space-x-4">
             <Link href="/cart">
-              <div className="flex items-center space-x-2 cursor-pointer hover:text-blue-600 transition-colors duration-200">
-                <span className="text-2xl">🛒</span>
-                <span className="text-sm hidden sm:block">Cart</span>
+              <div className="flex items-center space-x-2 cursor-pointer hover:text-blue-600 transition-colors duration-200 relative">
+                <div className="relative">
+                  <span className="text-2xl">🛒</span>
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold animate-pulse">
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm hidden sm:block">Cart ({cartCount})</span>
               </div>
             </Link>
 
@@ -239,7 +269,16 @@ export default function Header() {
           >
             <div className="flex items-center justify-between mb-8">
               <Link href="/" onClick={toggleMenu}>
-                <Image src="/assets/logo.jpg" alt="logo" width={50} height={40} />
+                <div className="flex items-center space-x-2">
+                  <Image
+                    src="/assets/logo.jpg"
+                    alt="Macstore Logo"
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 rounded-lg object-cover"
+                  />
+                  <span className="text-lg font-bold text-gray-800">Macstore</span>
+                </div>
               </Link>
               <button onClick={toggleMenu} className="text-gray-500 hover:text-gray-700">
                 ✕

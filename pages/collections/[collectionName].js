@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../lib/firebase";
 import Image from "next/image";
+import AddToCartButton from "../../componenets/AddToCartButton";
 
 const PRODUCTS_PER_PAGE = 12;
 
@@ -494,30 +495,42 @@ export default function CollectionDetailPage() {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: index * 0.1 }}
-                        className="group cursor-pointer bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
-                        onClick={() => handleCardClick(product.id)}
+                        className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 flex flex-col"
                       >
-                        <div className="relative w-full aspect-[3/4] overflow-hidden">
-                          <OptimizedImage
-                            src={product.images?.[0]}
-                            alt={product.title}
-                            className="object-cover group-hover:scale-110 transition-transform duration-700"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        </div>
+                        <div 
+                          className="cursor-pointer flex-grow"
+                          onClick={() => handleCardClick(product.id)}
+                        >
+                          <div className="relative w-full aspect-[3/4] overflow-hidden">
+                            <OptimizedImage
+                              src={product.images?.[0]}
+                              alt={product.title}
+                              className="object-cover group-hover:scale-110 transition-transform duration-700"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          </div>
 
-                        <div className="p-4">
-                          <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
-                            {product.title}
-                          </h3>
-                          <p className="text-2xl font-bold text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text">
-                            PKR {parseFloat(product.price || 0).toLocaleString()}
-                          </p>
-                          {!isNonFabricCollection && product.fabric && (
-                            <p className="text-sm text-gray-600 mt-1">
-                              Fabric: {product.fabric}
+                          <div className="p-4">
+                            <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
+                              {product.title}
+                            </h3>
+                            <p className="text-2xl font-bold text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text mb-2">
+                              PKR {parseFloat(product.price || 0).toLocaleString()}
                             </p>
-                          )}
+                            {!isNonFabricCollection && product.fabric && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                Fabric: {product.fabric}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="px-4 pb-4">
+                          <AddToCartButton 
+                            product={product}
+                            variant="compact"
+                            className="w-full"
+                          />
                         </div>
                       </motion.div>
                     ))}
@@ -596,25 +609,37 @@ export default function CollectionDetailPage() {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: index * 0.1 }}
-                        className="group cursor-pointer bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
-                        onClick={() => handleCardClick(product.id)}
+                        className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 flex flex-col"
                       >
-                        <div className="relative w-full aspect-[3/4] overflow-hidden">
-                          <OptimizedImage
-                            src={product.images?.[0]}
-                            alt={product.title}
-                            className="object-cover group-hover:scale-110 transition-transform duration-700"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        </div>
+                        <div 
+                          className="cursor-pointer flex-grow"
+                          onClick={() => handleCardClick(product.id)}
+                        >
+                          <div className="relative w-full aspect-[3/4] overflow-hidden">
+                            <OptimizedImage
+                              src={product.images?.[0]}
+                              alt={product.title}
+                              className="object-cover group-hover:scale-110 transition-transform duration-700"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          </div>
 
-                        <div className="p-4">
-                          <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
-                            {product.title}
-                          </h3>
-                          <p className="text-2xl font-bold text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text">
-                            PKR {parseFloat(product.price || 0).toLocaleString()}
-                          </p>
+                          <div className="p-4">
+                            <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
+                              {product.title}
+                            </h3>
+                            <p className="text-2xl font-bold text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text mb-2">
+                              PKR {parseFloat(product.price || 0).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="px-4 pb-4">
+                          <AddToCartButton 
+                            product={product}
+                            variant="compact"
+                            className="w-full"
+                          />
                         </div>
                       </motion.div>
                     ))}

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import CollectionSection from "../componenets/CollectionSection";
+import AddToCartButton from "../componenets/AddToCartButton";
 import { FaSpinner, FaFilter, FaTimes, FaSearch } from "react-icons/fa";
 
 // Fabric names data organized by category
@@ -588,7 +589,7 @@ export default function ShopAll() {
                                         >
                                             <Link
                                                 href={`/product/${product.id}`}
-                                                className="flex flex-col h-full"
+                                                className="flex flex-col flex-grow"
                                             >
                                                 <div className="relative w-full aspect-[3/4] overflow-hidden">
                                                     <Image
@@ -624,7 +625,7 @@ export default function ShopAll() {
                                                                 ⭐ {product.reviews} reviews
                                                             </p>
                                                         )}
-                                                        <div className="flex items-center justify-between">
+                                                        <div className="flex items-center justify-between mb-3">
                                                             <div className="flex items-center space-x-2">
                                                                 {product.oldPrice && (
                                                                     <span className="line-through text-gray-400 text-xs">
@@ -639,6 +640,13 @@ export default function ShopAll() {
                                                     </div>
                                                 </div>
                                             </Link>
+                                            <div className="px-4 pb-4">
+                                                <AddToCartButton 
+                                                    product={product}
+                                                    variant="compact"
+                                                    className="w-full"
+                                                />
+                                            </div>
                                         </motion.div>
                                     ))}
                                 </div>

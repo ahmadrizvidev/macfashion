@@ -10,7 +10,7 @@ import {
     query,
     orderBy,
 } from "firebase/firestore";
-import { FaTrash, FaPen, FaUpload, FaPlus, FaTimes, FaBars, FaSpinner, FaFilter, FaChevronDown, FaChevronUp } from "react-icons/fa";
+import { FaTrash, FaPen, FaUpload, FaPlus, FaTimes, FaBars, FaSpinner, FaFilter, FaChevronDown, FaChevronUp, FaSearch } from "react-icons/fa";
 import { FiDollarSign, FiCalendar, FiShoppingCart } from "react-icons/fi";
 import { motion } from "framer-motion";
 import { db, auth } from "../../lib/firebase";
@@ -114,6 +114,11 @@ export default function Dashboard() {
     const [isAdmin, setIsAdmin] = useState(false);
     const [showFabricDropdown, setShowFabricDropdown] = useState(false);
     const [fabricSearch, setFabricSearch] = useState("");
+    
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [searchQuery, setSearchQuery] = useState("");
+    const productsPerPage = 12;
 
     const initialOrderCountRef = useRef(0);
     const [orderSubTab, setOrderSubTab] = useState("pending");
@@ -170,14 +175,27 @@ export default function Dashboard() {
     const [images, setImages] = useState([]);
     const [video, setVideo] = useState(null);
 
-    // Filter products based on selected collection
+    // Filter products based on selected collection and search
     useEffect(() => {
-        if (selectedCollection === "All") {
-            setFilteredProducts(products);
-        } else {
-            setFilteredProducts(products.filter(product => product.collection === selectedCollection));
+        let filtered = products;
+        
+        // Filter by collection
+        if (selectedCollection !== "All") {
+            filtered = filtered.filter(product => product.collection === selectedCollection);
         }
-    }, [products, selectedCollection]);
+        
+        // Filter by search query
+        if (searchQuery.trim()) {
+            filtered = filtered.filter(product => 
+                product.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                product.fabric?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+        
+        setFilteredProducts(filtered);
+        setCurrentPage(1); // Reset to first page when filters change
+    }, [products, selectedCollection, searchQuery]);
 
     // Get appropriate fabric names based on selected collection
     const getFabricOptions = () => {
@@ -520,6 +538,42 @@ export default function Dashboard() {
 
     const pendingOrders = orders.filter(o => ["Pending", "Processing", "Ready for Packed", "Ready for Shipping"].includes(o.status));
     const completedOrders = orders.filter(o => ["Shipped", "Cancelled"].includes(o.status));
+    
+    // Calculate pagination
+    const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+    const startIndex = (currentPage - 1) * productsPerPage;
+    const paginatedProducts = filteredProducts.slice(startIndex, startIndex + productsPerPage);
+    
+    // Pagination helper
+    const handlePageChange = (pageNumber) => {
+        if (pageNumber >= 1 && pageNumber <= totalPages) {
+            setCurrentPage(pageNumber);
+            // Scroll to top of manage section
+            document.getElementById('manage-products-section')?.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+    
+    // Generate page numbers for pagination
+    const getPageNumbers = () => {
+        const pages = [];
+        const maxVisible = 5;
+        
+        if (totalPages <= maxVisible) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            if (currentPage <= 3) {
+                pages.push(1, 2, 3, 4, '...', totalPages);
+            } else if (currentPage >= totalPages - 2) {
+                pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+            } else {
+                pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+            }
+        }
+        
+        return pages;
+    };
 
     return (
         <div className="flex min-h-screen font-sans bg-gray-50 text-gray-800">
@@ -901,23 +955,50 @@ export default function Dashboard() {
 
                 {/* Manage Products Tab */}
                 {activeTab === "manage" && (
-                    <div className="space-y-6">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div className="space-y-6" id="manage-products-section">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
                             <h2 className="text-3xl font-bold text-gray-900">Manage Products</h2>
-                            <div className="flex items-center gap-2">
-                                <FaFilter className="text-gray-500" />
-                                <select
-                                    value={selectedCollection}
-                                    onChange={(e) => setSelectedCollection(e.target.value)}
-                                    className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                >
-                                    {collections.map((collection) => (
-                                        <option key={collection} value={collection}>
-                                            {collection}
-                                        </option>
-                                    ))}
-                                </select>
+                            
+                            {/* Search and Filter Controls */}
+                            <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                                {/* Search Input */}
+                                <div className="relative flex-1 lg:w-64">
+                                    <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search products..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                                    />
+                                </div>
+                                
+                                {/* Collection Filter */}
+                                <div className="flex items-center gap-2">
+                                    <FaFilter className="text-gray-500" />
+                                    <select
+                                        value={selectedCollection}
+                                        onChange={(e) => setSelectedCollection(e.target.value)}
+                                        className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-[150px]"
+                                    >
+                                        {collections.map((collection) => (
+                                            <option key={collection} value={collection}>
+                                                {collection}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
+                        </div>
+                        
+                        {/* Results Summary */}
+                        <div className="flex justify-between items-center text-sm text-gray-600 bg-white p-4 rounded-lg shadow-sm">
+                            <span>
+                                Showing {startIndex + 1}-{Math.min(startIndex + productsPerPage, filteredProducts.length)} of {filteredProducts.length} products
+                                {searchQuery && ` for "${searchQuery}"`}
+                                {selectedCollection !== "All" && ` in ${selectedCollection}`}
+                            </span>
+                            <span>Page {currentPage} of {totalPages}</span>
                         </div>
 
                         {loading ? (
@@ -926,8 +1007,9 @@ export default function Dashboard() {
                                 <span className="ml-4 text-xl font-semibold text-indigo-600">Loading Products...</span>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {filteredProducts.map((product) => (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {paginatedProducts.map((product) => (
                                     <div key={product.id} className="bg-white rounded-2xl shadow-xl overflow-hidden transform transition-transform duration-300 hover:scale-105">
                                         <div className="relative h-48">
                                             {product.images && product.images[0] ? (
@@ -989,8 +1071,70 @@ export default function Dashboard() {
                                             )}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                                
+                                {/* Pagination */}
+                                {totalPages > 1 && (
+                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 bg-white p-4 rounded-lg shadow-sm">
+                                        <div className="text-sm text-gray-600">
+                                            Page {currentPage} of {totalPages}
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-2">
+                                            {/* Previous Button */}
+                                            <button
+                                                onClick={() => handlePageChange(currentPage - 1)}
+                                                disabled={currentPage === 1}
+                                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                                    currentPage === 1 
+                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                                }`}
+                                            >
+                                                Previous
+                                            </button>
+                                            
+                                            {/* Page Numbers */}
+                                            <div className="flex gap-1">
+                                                {getPageNumbers().map((page, index) => (
+                                                    <button
+                                                        key={index}
+                                                        onClick={() => typeof page === 'number' && handlePageChange(page)}
+                                                        disabled={page === '...'}
+                                                        className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
+                                                            currentPage === page
+                                                                ? 'bg-indigo-600 text-white'
+                                                                : page === '...'
+                                                                ? 'bg-transparent text-gray-400 cursor-default'
+                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                        }`}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            
+                                            {/* Next Button */}
+                                            <button
+                                                onClick={() => handlePageChange(currentPage + 1)}
+                                                disabled={currentPage === totalPages}
+                                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                                    currentPage === totalPages 
+                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                                }`}
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="text-sm text-gray-600">
+                                            {filteredProducts.length} total products
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
 
                         {!loading && filteredProducts.length === 0 && (

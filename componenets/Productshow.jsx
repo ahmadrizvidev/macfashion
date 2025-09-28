@@ -7,6 +7,7 @@ import { db } from "../lib/firebase";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { FaStar, FaSpinner } from 'react-icons/fa';
+import AddToCartButton from "./AddToCartButton";
 
 // Function to format price in PKR
 const formatPrice = (price) => {
@@ -95,20 +96,20 @@ export default function SummerTracksuits() {
         {displayProducts.map((product) => (
           <motion.div
             key={product.id}
-            className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition duration-300 overflow-hidden cursor-pointer flex flex-col h-full"
+            className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition duration-300 overflow-hidden flex flex-col h-full group"
             whileHover={{ scale: 1.03 }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <Link href={`/product/${product.id}`} className="flex flex-col h-full">
+            <Link href={`/product/${product.id}`} className="flex flex-col flex-grow">
               {/* Use a fixed aspect ratio for the image container */}
               <div className="relative w-full aspect-[3/4] rounded-t-2xl overflow-hidden">
                 <Image
                   src={product.images?.[0] || "/placeholder.png"}
                   alt={product.title}
                   fill
-                  className="object-cover transition-transform duration-500 hover:scale-110"
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
                   sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 25vw"
                   placeholder="blur"
                   blurDataURL="/placeholder.png"
@@ -117,7 +118,7 @@ export default function SummerTracksuits() {
               <div className="p-5 flex flex-col flex-grow">
                 {/* Fixed height for the title container with line-clamp */}
                 <div className="h-14">
-                  <h3 className="text-xl font-bold text-gray-800 hover:text-indigo-600 transition line-clamp-2">
+                  <h3 className="text-xl font-bold text-gray-800 group-hover:text-indigo-600 transition line-clamp-2">
                     {product.title}
                   </h3>
                 </div>
@@ -129,7 +130,7 @@ export default function SummerTracksuits() {
                       {product.reviewsCount > 0 ? `${product.reviewsCount} reviews` : "No reviews yet"}
                     </span>
                   </div>
-                  <div className="mt-3 flex items-center space-x-3">
+                  <div className="mt-3 flex items-center space-x-3 mb-4">
                     {product.oldPrice && (
                       <span className="line-through text-gray-400 font-medium text-sm">
                         {formatPrice(product.oldPrice)}
@@ -142,6 +143,15 @@ export default function SummerTracksuits() {
                 </div>
               </div>
             </Link>
+            
+            {/* Add to Cart Button - Outside Link to prevent conflicts */}
+            <div className="px-5 pb-5">
+              <AddToCartButton 
+                product={product}
+                variant="compact"
+                className="w-full"
+              />
+            </div>
           </motion.div>
         ))}
       </div>

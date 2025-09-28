@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import { db } from "../lib/firebase";
 import { collection, getDocs, query, where, limit } from "firebase/firestore";
 import { FaStar, FaSpinner } from "react-icons/fa";
+import AddToCartButton from "./AddToCartButton";
 
 // Memoized price formatter
 const formatPrice = (price) => {
@@ -183,13 +184,15 @@ export default function CollectionProducts({ collectionName }) {
 
         <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-6">
           {products.map((product, index) => (
-            <Link
+            <div
               key={product.id}
-              href={`/product/${product.id}`}
-              className="block group"
-              prefetch={false}
+              className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col h-full group"
             >
-              <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col h-full">
+              <Link
+                href={`/product/${product.id}`}
+                className="block flex-grow"
+                prefetch={false}
+              >
                 <div className="relative w-full aspect-[3/4] overflow-hidden">
                   <Image
                     src={product.images?.[0] || "/placeholder.png"}
@@ -201,7 +204,7 @@ export default function CollectionProducts({ collectionName }) {
                   />
                 </div>
                 <div className="p-3 flex flex-col flex-grow">
-                  <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight">
+                  <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight group-hover:text-indigo-600 transition-colors">
                     {product.title}
                   </h3>
                   <div className="flex-grow flex flex-col justify-end mt-2">
@@ -214,7 +217,7 @@ export default function CollectionProducts({ collectionName }) {
                         }
                       </span>
                     </div>
-                    <div className="flex items-baseline space-x-1">
+                    <div className="flex items-baseline space-x-1 mb-3">
                       {product.oldPrice && (
                         <span className="line-through text-gray-400 font-medium text-xs">
                           {formatPrice(product.oldPrice)}
@@ -226,8 +229,15 @@ export default function CollectionProducts({ collectionName }) {
                     </div>
                   </div>
                 </div>
+              </Link>
+              <div className="px-3 pb-3">
+                <AddToCartButton 
+                  product={product}
+                  variant="compact"
+                  className="w-full"
+                />
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>

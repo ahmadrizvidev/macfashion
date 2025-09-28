@@ -4,57 +4,37 @@ import { useRouter } from "next/router";
 import Image from "next/image";
 import { FiX, FiMinus, FiPlus, FiHeart } from "react-icons/fi";
 import Link from "next/link";
+import { useCart } from "../context/CartContext";
 
 export default function Cart() {
-  const [cartItems, setCartItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { cartItems, updateQuantity, removeFromCart, getCartTotal, isLoading } = useCart();
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const items = JSON.parse(localStorage.getItem("cart") || "[]");
-    setCartItems(items);
-    setLoading(false);
-  }, []);
-
-  const updateQuantity = (id, newQuantity, selectedCategory, selectedColor) => {
-    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    const itemIndex = cart.findIndex(
-      (item) =>
-        item.id === id &&
-        item.selectedCategory === selectedCategory &&
-        item.selectedColor === selectedColor
-    );
-
-    if (itemIndex !== -1) {
-      if (newQuantity <= 0) {
-        cart.splice(itemIndex, 1);
-      } else {
-        cart[itemIndex].quantity = newQuantity;
-      }
-      setCartItems(cart);
-      localStorage.setItem("cart", JSON.stringify(cart));
+  const handleUpdateQuantity = async (cartId, newQuantity) => {
+    setLoading(true);
+    try {
+      await updateQuantity(cartId, newQuantity);
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const removeItem = (id, selectedCategory, selectedColor) => {
-    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    const updatedCart = cart.filter(
-      (item) =>
-        !(
-          item.id === id &&
-          item.selectedCategory === selectedCategory &&
-          item.selectedColor === selectedColor
-        )
-    );
-    setCartItems(updatedCart);
-    localStorage.setItem("cart", JSON.stringify(updatedCart));
+  const handleRemoveItem = async (cartId) => {
+    setLoading(true);
+    try {
+      await removeFromCart(cartId);
+    } catch (error) {
+      console.error("Error removing item:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const calculateSubtotal = () => {
-    return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
-      0
-    );
+    return getCartTotal();
   };
 
   const shipping = cartItems.length > 0 ? 220 : 0;
@@ -134,14 +114,13 @@ export default function Cart() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() =>
-                      updateQuantity(
-                        item.id,
-                        item.quantity - 1,
-                        item.selectedCategory,
-                        item.selectedColor
+                      handleUpdateQuantity(
+                        item.cartId,
+                        item.quantity - 1
                       )
                     }
-                    className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 hover:bg-gray-100"
+                    disabled={loading}
+                    className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
                   >
                     <FiMinus />
                   </button>
@@ -150,14 +129,13 @@ export default function Cart() {
                   </span>
                   <button
                     onClick={() =>
-                      updateQuantity(
-                        item.id,
-                        item.quantity + 1,
-                        item.selectedCategory,
-                        item.selectedColor
+                      handleUpdateQuantity(
+                        item.cartId,
+                        item.quantity + 1
                       )
                     }
-                    className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 hover:bg-gray-100"
+                    disabled={loading}
+                    className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
                   >
                     <FiPlus />
                   </button>
@@ -168,13 +146,10 @@ export default function Cart() {
                
                   <button
                     onClick={() =>
-                      removeItem(
-                        item.id,
-                        item.selectedCategory,
-                        item.selectedColor
-                      )
+                      handleRemoveItem(item.cartId)
                     }
-                    className="text-gray-400 hover:text-red-500 transition"
+                    disabled={loading}
+                    className="text-gray-400 hover:text-red-500 transition disabled:opacity-50"
                   >
                     <FiX className="w-5 h-5" />
                   </button>
