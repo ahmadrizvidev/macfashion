@@ -18,6 +18,8 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { useCart } from "../context/CartContext";
+import { FaPlus, FaMinus, FaTrash } from "react-icons/fa";
 
 // A helper function to generate a short, unique ID
 function generateTrackingId() {
@@ -65,6 +67,7 @@ FormField.displayName = 'FormField';
 
 export default function Checkout() {
     const router = useRouter();
+    const { updateQuantity, removeFromCart } = useCart();
     const [cartItems, setCartItems] = useState([]);
     const [formData, setFormData] = useState({
         fullName: "",
@@ -98,6 +101,40 @@ export default function Checkout() {
         (acc, item) => acc + item.quantity * parseFloat(item.price),
         0
     );
+
+    // Handle quantity updates
+    const handleQuantityUpdate = async (cartId, newQuantity) => {
+        if (newQuantity <= 0) {
+            await handleRemoveItem(cartId);
+            return;
+        }
+        
+        await updateQuantity(cartId, newQuantity);
+        
+        // Update local state
+        setCartItems(prevItems => 
+            prevItems.map(item => 
+                item.cartId === cartId 
+                    ? { ...item, quantity: newQuantity }
+                    : item
+            )
+        );
+    };
+
+    // Handle item removal
+    const handleRemoveItem = async (cartId) => {
+        await removeFromCart(cartId);
+        
+        // Update local state
+        setCartItems(prevItems => prevItems.filter(item => item.cartId !== cartId));
+        
+        // If cart becomes empty, redirect to home
+        if (cartItems.length <= 1) {
+            setTimeout(() => {
+                router.push('/');
+            }, 1000);
+        }
+    };
     const shippingFee = subtotalPKR >= 2500 ? 0 : 220;
     const finalTotalPKR = subtotalPKR + shippingFee;
 
@@ -332,50 +369,94 @@ export default function Checkout() {
                     </h2>
                     <div className="space-y-4 border-b border-gray-200 pb-4">
                         {cartItems.map((item) => (
-                            <div key={item.id} className="flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden">
-                                        <Image
-                                            src={item.images?.[0] || "/placeholder.png"}
-                                            alt={item.title}
-                                            fill
-                                            style={{ objectFit: "cover" }}
-                                        />
+                            <motion.div 
+                                key={item.id} 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                className="bg-gray-50 p-4 rounded-lg border border-gray-200"
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden">
+                                            <Image
+                                                src={item.images?.[0] || "/placeholder.png"}
+                                                alt={item.title}
+                                                fill
+                                                style={{ objectFit: "cover" }}
+                                            />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-gray-800 font-medium truncate">
+                                                {item.title}
+                                            </p>
+                                            {item.selectedCategory && (
+                                                <p className="text-gray-500 text-sm">Size: {item.selectedCategory}</p>
+                                            )}
+                                            {item.selectedColor && (
+                                                <p className="text-gray-500 text-sm">Color: {item.selectedColor}</p>
+                                            )}
+                                            <p className="text-gray-600 text-sm font-medium">
+                                                PKR {parseFloat(item.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} each
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-gray-800 font-medium truncate">
-                                            {item.title}
-                                        </p>
-                                        {item.selectedCategory && (
-                                            <p className="text-gray-500 text-sm">Category: {item.selectedCategory}</p>
-                                        )}
-                                        {item.selectedColor && (
-                                            <p className="text-gray-500 text-sm">Color: {item.selectedColor}</p>
-                                        )}
-                                        <p className="text-gray-500 text-sm">Qty: {item.quantity}</p>
+                                    
+                                    {/* Quantity Controls */}
+                                    <div className="flex items-center gap-2 ml-4">
+                                        <button
+                                            onClick={() => handleQuantityUpdate(item.cartId, item.quantity - 1)}
+                                            className="p-2 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            disabled={item.quantity <= 1}
+                                        >
+                                            <FaMinus className="w-3 h-3 text-gray-600" />
+                                        </button>
+                                        
+                                        <span className="px-3 py-1 text-sm font-medium min-w-[2.5rem] text-center bg-white border border-gray-300 rounded">
+                                            {item.quantity}
+                                        </span>
+                                        
+                                        <button
+                                            onClick={() => handleQuantityUpdate(item.cartId, item.quantity + 1)}
+                                            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                        >
+                                            <FaPlus className="w-3 h-3 text-gray-600" />
+                                        </button>
                                     </div>
+                                    
+                                    {/* Remove Button */}
+                                    <button
+                                        onClick={() => handleRemoveItem(item.cartId)}
+                                        className="p-2 hover:bg-red-100 rounded-lg transition-colors ml-2 group"
+                                    >
+                                        <FaTrash className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
+                                    </button>
                                 </div>
-                                <span className="font-semibold text-gray-900">
-                                    PKR {(item.quantity * parseFloat(item.price)).toFixed(2)}
-                                </span>
-                            </div>
+                                
+                                {/* Item Total */}
+                                <div className="flex justify-end mt-2">
+                                    <span className="font-semibold text-gray-900 text-lg">
+                                        PKR {(item.quantity * parseFloat(item.price)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            </motion.div>
                         ))}
                     </div>
 
                     <div className="space-y-3 pt-4 text-gray-700">
                         <div className="flex justify-between">
                             <span>Subtotal:</span>
-                            <span className="font-semibold">PKR {subtotalPKR.toFixed(2)}</span>
+                            <span className="font-semibold">PKR {subtotalPKR.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between">
                             <span>Shipping:</span>
                             <span className="font-semibold">
-                                {shippingFee === 0 ? "Free" : `PKR ${shippingFee}`}
+                                {shippingFee === 0 ? "Free" : `PKR ${shippingFee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                             </span>
                         </div>
                         <div className="flex justify-between items-center text-lg font-bold border-t border-gray-200 pt-3">
                             <span>Total:</span>
-                            <span className="text-indigo-600">PKR {finalTotalPKR.toFixed(2)}</span>
+                            <span className="text-indigo-600">PKR {finalTotalPKR.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                     </div>
                     <motion.button

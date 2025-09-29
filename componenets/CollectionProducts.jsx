@@ -6,7 +6,6 @@ import { useEffect, useState, useCallback } from "react";
 import { db } from "../lib/firebase";
 import { collection, getDocs, query, where, limit } from "firebase/firestore";
 import { FaStar, FaSpinner } from "react-icons/fa";
-import AddToCartButton from "./AddToCartButton";
 import BuyNowButton from "./BuyNowButton";
 
 // Memoized price formatter

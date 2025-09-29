@@ -7,7 +7,6 @@ import { db } from "../lib/firebase";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { FaStar, FaSpinner } from 'react-icons/fa';
-import AddToCartButton from "./AddToCartButton";
 import BuyNowButton from "./BuyNowButton";
 
 // Function to format price in PKR

@@ -17,8 +17,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../lib/firebase";
 import Image from "next/image";
-import AddToCartButton from "../../componenets/AddToCartButton";
 import BuyNowButton from "../../componenets/BuyNowButton";
+import CartManager from "../../componenets/CartManager";
+import { useCart } from "../../context/CartContext";
 
 const PRODUCTS_PER_PAGE = 12;
 
@@ -142,6 +143,7 @@ export default function CollectionDetailPage() {
   const router = useRouter();
   const urlCollection = params?.collectionName || "";
   const collectionName = fromUrl(urlCollection);
+  const { cartItems, getCartTotal, getCartItemsCount } = useCart();
 
   const [products, setProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
@@ -311,6 +313,28 @@ export default function CollectionDetailPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Handle checkout with all cart items
+  const handleCheckout = (cartItems) => {
+    // Store all cart items for checkout
+    localStorage.setItem("checkoutItems", JSON.stringify(cartItems));
+
+    // FB Pixel InitiateCheckout
+    if (typeof window !== "undefined" && window.fbq) {
+      const totalValue = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+      const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+      
+      window.fbq("track", "InitiateCheckout", {
+        content_type: "product",
+        value: totalValue,
+        currency: "PKR",
+        num_items: totalItems,
+      });
+    }
+
+    // Navigate to checkout
+    router.push("/checkout");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -371,6 +395,15 @@ export default function CollectionDetailPage() {
             </div>
           </div>
         </motion.div>
+
+        {/* Cart Manager - Shows when cart has items */}
+        <div className="max-w-4xl mx-auto mb-8">
+          <CartManager
+            variant="default"
+            className="mx-auto"
+            onCheckout={handleCheckout}
+          />
+        </div>
 
         {/* Fabric Filter Chips - Only show for fabric collections */}
         {!isNonFabricCollection && availableFabrics.length > 0 && (

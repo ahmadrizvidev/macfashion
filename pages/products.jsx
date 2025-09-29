@@ -7,8 +7,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import CollectionSection from "../componenets/CollectionSection";
-import AddToCartButton from "../componenets/AddToCartButton";
 import BuyNowButton from "../componenets/BuyNowButton";
+import CartManager from "../componenets/CartManager";
+import { useCart } from "../context/CartContext";
+import { useRouter } from "next/router";
 import { FaSpinner, FaFilter, FaTimes, FaSearch } from "react-icons/fa";
 
 // Fabric names data organized by category
@@ -61,6 +63,8 @@ const FABRIC_NAMES = {
 FABRIC_NAMES.all = [...FABRIC_NAMES.ladiesSummer, ...FABRIC_NAMES.ladiesWinter, ...FABRIC_NAMES.mens];
 
 export default function ShopAll() {
+    const router = useRouter();
+    const { cartItems, getCartTotal, getCartItemsCount } = useCart();
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -181,6 +185,28 @@ export default function ShopAll() {
         setSortBy("price-low");
     };
 
+    // Handle checkout with all cart items
+    const handleCheckout = (cartItems) => {
+        // Store all cart items for checkout
+        localStorage.setItem("checkoutItems", JSON.stringify(cartItems));
+
+        // FB Pixel InitiateCheckout
+        if (typeof window !== "undefined" && window.fbq) {
+            const totalValue = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+            const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+            
+            window.fbq("track", "InitiateCheckout", {
+                content_type: "product",
+                value: totalValue,
+                currency: "PKR",
+                num_items: totalItems,
+            });
+        }
+
+        // Navigate to checkout
+        router.push("/checkout");
+    };
+
     // Get active filters count
     const activeFiltersCount = [
         search ? 1 : 0,
@@ -284,6 +310,15 @@ export default function ShopAll() {
                     <p className="text-lg text-gray-600 max-w-3xl mx-auto">
                         Discover our complete collection of premium fabrics and fashion
                     </p>
+                </div>
+
+                {/* Cart Manager - Shows when cart has items */}
+                <div className="max-w-4xl mx-auto mb-8">
+                    <CartManager
+                        variant="default"
+                        className="mx-auto"
+                        onCheckout={handleCheckout}
+                    />
                 </div>
 
                 {/* Mobile Filter Toggle */}

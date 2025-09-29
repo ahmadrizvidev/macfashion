@@ -72,58 +72,53 @@ const BuyNowButton = ({
     setIsProcessing(true);
     
     try {
-      // If item is not in cart, add it first
-      if (!itemInCart) {
-        const success = await addToCart(product, {
-          quantity: currentQuantity,
-          selectedCategory,
-          selectedColor,
-          redirect: false
-        });
+      // Always add/update the product in cart first
+      const success = await addToCart(product, {
+        quantity: currentQuantity,
+        selectedCategory,
+        selectedColor,
+        redirect: false
+      });
 
-        if (!success) {
-          throw new Error("Failed to add product to cart");
-        }
+      if (!success) {
+        throw new Error("Failed to add product to cart");
       }
 
-      // Prepare product for checkout
-      const productForCheckout = [
-        {
-          ...product,
-          id: product.id,
-          quantity: itemInCart ? cartQuantity : currentQuantity,
-          selectedCategory,
-          selectedColor,
-        },
-      ];
-
-      // Store in localStorage for checkout
-      localStorage.setItem("checkoutItems", JSON.stringify(productForCheckout));
-
-      // FB Pixel InitiateCheckout
-      const checkoutQuantity = itemInCart ? cartQuantity : currentQuantity;
-      trackInitiateCheckout(productForCheckout[0], checkoutQuantity, selectedCategory, selectedColor);
+      // Check if this is a "BUY NOW" action (product already in cart) or "ADD TO CART" (new product)
+      const updatedCartItems = JSON.parse(localStorage.getItem("cart") || "[]");
+      const wasItemInCart = itemInCart;
       
-      if (typeof window !== "undefined" && window.fbq) {
-        window.fbq("track", "InitiateCheckout", {
-          content_name: product.title,
-          content_ids: [product.id],
-          content_type: "product",
-          value: product.price * checkoutQuantity,
-          currency: "PKR",
-          quantity: checkoutQuantity,
-          category: selectedCategory,
-          color: selectedColor,
-        });
-      }
-
       setShowSuccess(true);
       if (onBuyNowSuccess) onBuyNowSuccess();
       
-      // Navigate to checkout after a brief delay
-      setTimeout(() => {
-        router.push("/checkout");
-      }, 500);
+      // Only redirect to checkout if this was a "BUY NOW" action (item was already in cart)
+      if (wasItemInCart) {
+        setTimeout(() => {
+          const allCartItems = JSON.parse(localStorage.getItem("cart") || "[]");
+          
+          if (allCartItems.length > 0) {
+            // Store all cart items for checkout
+            localStorage.setItem("checkoutItems", JSON.stringify(allCartItems));
+
+            // FB Pixel InitiateCheckout
+            if (typeof window !== "undefined" && window.fbq) {
+              const totalValue = allCartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+              const totalItems = allCartItems.reduce((total, item) => total + item.quantity, 0);
+              
+              window.fbq("track", "InitiateCheckout", {
+                content_type: "product",
+                value: totalValue,
+                currency: "PKR",
+                num_items: totalItems,
+              });
+            }
+
+            // Navigate to checkout
+            router.push("/checkout");
+          }
+        }, 500);
+      }
+      // If it was "ADD TO CART" (new item), just stay on page - no redirect
 
     } catch (error) {
       console.error("Error processing buy now:", error);
@@ -287,7 +282,7 @@ const BuyNowButton = ({
                 className="flex items-center gap-2"
               >
                 <FaCheck className={`${styles.icon} text-white`} />
-                <span>Redirecting...</span>
+                <span>{itemInCart ? 'Redirecting...' : 'Added!'}</span>
               </motion.div>
             ) : itemInCart ? (
               <motion.div
@@ -302,14 +297,14 @@ const BuyNowButton = ({
               </motion.div>
             ) : (
               <motion.div
-                key="add-and-buy"
+                key="add-to-cart"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 className="flex items-center gap-2"
               >
                 <FaShoppingCart className={`${styles.icon}`} />
-                <span>Add & Buy Now ({currentQuantity})</span>
+                <span>Add to Cart ({currentQuantity})</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -335,7 +330,7 @@ const BuyNowButton = ({
               exit={{ opacity: 0, y: -20, scale: 0.8 }}
               transition={{ duration: 0.3 }}
             >
-              ✓ Redirecting to checkout!
+              ✓ {itemInCart ? 'Redirecting to checkout!' : 'Added to cart!'}
             </motion.div>
           )}
         </AnimatePresence>
@@ -350,7 +345,7 @@ const BuyNowButton = ({
             exit={{ opacity: 0, y: -10 }}
             className="text-center text-sm text-green-600 font-medium"
           >
-            ✓ Redirecting to checkout...
+            ✓ {itemInCart ? 'Redirecting to checkout...' : 'Added to cart successfully!'}
           </motion.div>
         )}
       </AnimatePresence>

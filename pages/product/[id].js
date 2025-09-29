@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import { db } from "../../lib/firebase";
+import { useCart } from "../../context/CartContext";
 import {
   doc,
   getDoc,
@@ -24,8 +25,8 @@ import {
   FiStar,
   FiX,
 } from "react-icons/fi";
-import AddToCartButton from "../../componenets/AddToCartButton";
 import BuyNowButton from "../../componenets/BuyNowButton";
+import CartManager from "../../componenets/CartManager";
 
 // FB Pixel functions
 import {
@@ -62,6 +63,7 @@ const metaPixelScript = () => {
 export default function ProductDetails() {
   const router = useRouter();
   const { id } = router.query;
+  const { cartItems, getCartTotal, getCartItemsCount } = useCart();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -215,6 +217,28 @@ export default function ProductDetails() {
     window.open(whatsappUrl, "_blank");
   };
 
+  // Handle checkout with all cart items
+  const handleCheckout = (cartItems) => {
+    // Store all cart items for checkout
+    localStorage.setItem("checkoutItems", JSON.stringify(cartItems));
+
+    // FB Pixel InitiateCheckout
+    if (typeof window !== "undefined" && window.fbq) {
+      const totalValue = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+      const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+      
+      window.fbq("track", "InitiateCheckout", {
+        content_type: "product",
+        value: totalValue,
+        currency: "PKR",
+        num_items: totalItems,
+      });
+    }
+
+    // Navigate to checkout
+    router.push("/checkout");
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -358,6 +382,31 @@ export default function ProductDetails() {
               </span>
             </motion.div>
 
+            {/* Cart Status - Simplified for mobile */}
+            {cartItems && cartItems.length > 0 && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                className="flex items-center justify-between bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 p-3 sm:p-4 rounded-lg shadow-sm"
+              >
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <FiShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
+                  <div>
+                    <span className="text-xs sm:text-sm font-semibold text-indigo-800">
+                      {getCartItemsCount()} item{getCartItemsCount() !== 1 ? 's' : ''} in cart
+                    </span>
+                    <div className="text-sm sm:text-lg font-bold text-indigo-900">
+                      PKR {getCartTotal().toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-indigo-600 font-medium hidden sm:block">
+                  Ready to checkout!
+                </div>
+              </motion.div>
+            )}
+
             {/* Error message */}
             {error && (
               <motion.div
@@ -430,7 +479,7 @@ export default function ProductDetails() {
                 showQuantityControls={true}
                 className="flex-1"
                 onBuyNowSuccess={() => {
-                  console.log("Buy now successful!");
+                  console.log("Buy now action successful!");
                   setError(null); // Clear any previous errors
                 }}
                 onBuyNowError={(error) => {
@@ -438,29 +487,14 @@ export default function ProductDetails() {
                   console.error("Buy now error:", error);
                 }}
               />
-              <AddToCartButton
-                product={product}
-                selectedCategory={selectedCategory}
-                selectedColor={selectedColor}
+              
+              {/* Cart Manager - Shows when cart has items */}
+              <CartManager
                 variant="default"
-                redirect={false}
-                className="flex-1"
-                onAddSuccess={() => {
-                  // Optional: Show success message or redirect
-                  console.log("Product added to cart successfully!");
-                  setError(null); // Clear any previous errors
-                }}
-                onAddError={(error) => {
-                  setError("Failed to add product to cart. Please try again.");
-                  console.error("Add to cart error:", error);
-                }}
+                className="mt-4"
+                onCheckout={handleCheckout}
               />
               
-              {/* Debug info - remove in production */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="text-xs text-gray-500 mt-0">
-                </div>
-              )}
               <button
                 className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-8 py-4 rounded-lg hover:bg-green-400 transition-colors text-lg font-semibold shadow-lg"
                 onClick={handleWhatsAppOrder}

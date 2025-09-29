@@ -73,7 +73,7 @@ const AddToCartButton = ({
         quantity: currentQuantity,
         selectedCategory,
         selectedColor,
-        redirect
+        redirect: false // Always stay on page
       });
 
       if (success) {
