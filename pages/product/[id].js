@@ -1,11 +1,8 @@
-"use client";
-
 // components/ProductDetails.js
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import { db } from "../../lib/firebase";
-import { useCart } from "../../context/CartContext";
 import {
   doc,
   getDoc,
@@ -25,8 +22,6 @@ import {
   FiStar,
   FiX,
 } from "react-icons/fi";
-import BuyNowButton from "../../componenets/BuyNowButton";
-import CartManager from "../../componenets/CartManager";
 
 // FB Pixel functions
 import {
@@ -63,7 +58,6 @@ const metaPixelScript = () => {
 export default function ProductDetails() {
   const router = useRouter();
   const { id } = router.query;
-  const { cartItems, getCartTotal, getCartItemsCount } = useCart();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -73,10 +67,10 @@ export default function ProductDetails() {
   const [comment, setComment] = useState("");
   const [showReviewPopup, setShowReviewPopup] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState([]);
-  const [relatedProductsLoading, setRelatedProductsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
   const [error, setError] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [quantity, setQuantity] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
 
@@ -124,8 +118,7 @@ export default function ProductDetails() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const prodData = docSnap.data();
-          // Add the id to the product data
-          setProduct({ ...prodData, id });
+          setProduct(prodData);
           if (prodData.collection) fetchRelatedProducts(prodData.collection);
           fetchReviews(id);
 
@@ -155,7 +148,6 @@ export default function ProductDetails() {
   const fetchRelatedProducts = async (collectionName) => {
     if (!collectionName) return;
     try {
-      setRelatedProductsLoading(true);
       const q = query(
         collection(db, "products"),
         where("collection", "==", collectionName)
@@ -168,8 +160,6 @@ export default function ProductDetails() {
       setRelatedProducts(related);
     } catch (err) {
       console.error("Failed to fetch related products:", err);
-    } finally {
-      setRelatedProductsLoading(false);
     }
   };
 
@@ -210,33 +200,113 @@ export default function ProductDetails() {
     }
   };
 
+  // Add to cart
+  const addToCart = () => {
+    setError(null);
+    const hasCategoryVariants = product.variants?.some((v) => v.size);
+    const hasColorVariants = product.variants?.some((v) => v.color);
+
+    if (hasCategoryVariants && !selectedCategory) {
+      setError("Please select a size before adding to cart.");
+      return;
+    }
+    if (hasColorVariants && !selectedColor) {
+      setError("Please select a color before adding to cart.");
+      return;
+    }
+
+    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+    const productWithVariants = {
+      ...product,
+      id,
+      quantity: quantity,
+      selectedCategory,
+      selectedColor,
+    };
+
+    const existingItemIndex = cart.findIndex(
+      (item) =>
+        item.id === id &&
+        item.selectedColor === selectedColor &&
+        item.selectedCategory === selectedCategory
+    );
+
+    if (existingItemIndex !== -1) {
+      cart[existingItemIndex].quantity += quantity;
+    } else {
+      cart.push(productWithVariants);
+    }
+
+    localStorage.setItem("cart", JSON.stringify(cart));
+
+    // FB Pixel AddToCart
+    trackAddToCart(productWithVariants, quantity, selectedCategory, selectedColor);
+    if (typeof window !== "undefined" && window.fbq) {
+      window.fbq("track", "AddToCart", {
+        content_name: product.title,
+        content_ids: [id],
+        content_type: "product",
+        value: product.price * quantity,
+        currency: "PKR",
+        quantity,
+        category: selectedCategory,
+        color: selectedColor,
+      });
+    }
+
+    router.push("/cart");
+  };
+
+  // Buy Now
+  const handleBuyNow = () => {
+    setError(null);
+    const hasCategoryVariants = product.variants?.some((v) => v.size);
+    const hasColorVariants = product.variants?.some((v) => v.color);
+
+    if (hasCategoryVariants && !selectedCategory) {
+      setError("Please select a category before proceeding to checkout.");
+      return;
+    }
+    if (hasColorVariants && !selectedColor) {
+      setError("Please select a color before proceeding to checkout.");
+      return;
+    }
+
+    const productForCheckout = [
+      {
+        ...product,
+        id,
+        quantity,
+        selectedCategory,
+        selectedColor,
+      },
+    ];
+    localStorage.setItem("checkoutItems", JSON.stringify(productForCheckout));
+
+    // FB Pixel InitiateCheckout
+    trackInitiateCheckout(productForCheckout[0], quantity, selectedCategory, selectedColor);
+    if (typeof window !== "undefined" && window.fbq) {
+      window.fbq("track", "InitiateCheckout", {
+        content_name: product.title,
+        content_ids: [id],
+        content_type: "product",
+        value: product.price * quantity,
+        currency: "PKR",
+        quantity,
+        category: selectedCategory,
+        color: selectedColor,
+      });
+    }
+
+    router.push("/checkout");
+  };
+
   // WhatsApp order
   const handleWhatsAppOrder = () => {
     const message = `I would like to order the product: ${product?.title}\nPrice: ${product?.price}\nProduct Link: ${window.location.href}`;
     const whatsappUrl = `https://wa.me/923052732104?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
-  };
-
-  // Handle checkout with all cart items
-  const handleCheckout = (cartItems) => {
-    // Store all cart items for checkout
-    localStorage.setItem("checkoutItems", JSON.stringify(cartItems));
-
-    // FB Pixel InitiateCheckout
-    if (typeof window !== "undefined" && window.fbq) {
-      const totalValue = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-      const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
-      
-      window.fbq("track", "InitiateCheckout", {
-        content_type: "product",
-        value: totalValue,
-        currency: "PKR",
-        num_items: totalItems,
-      });
-    }
-
-    // Navigate to checkout
-    router.push("/checkout");
   };
 
   if (loading) {
@@ -382,31 +452,6 @@ export default function ProductDetails() {
               </span>
             </motion.div>
 
-            {/* Cart Status - Simplified for mobile */}
-            {cartItems && cartItems.length > 0 && (
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 200, damping: 10 }}
-                className="flex items-center justify-between bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 p-3 sm:p-4 rounded-lg shadow-sm"
-              >
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <FiShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />
-                  <div>
-                    <span className="text-xs sm:text-sm font-semibold text-indigo-800">
-                      {getCartItemsCount()} item{getCartItemsCount() !== 1 ? 's' : ''} in cart
-                    </span>
-                    <div className="text-sm sm:text-lg font-bold text-indigo-900">
-                      PKR {getCartTotal().toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-xs text-indigo-600 font-medium hidden sm:block">
-                  Ready to checkout!
-                </div>
-              </motion.div>
-            )}
-
             {/* Error message */}
             {error && (
               <motion.div
@@ -469,32 +514,53 @@ export default function ProductDetails() {
               </div>
             )}
 
+            {/* Quantity selector */}
+            <div className="flex flex-col items-start gap-4 p-6 bg-white rounded-xl shadow-lg border border-gray-200 w-full max-w-sm mx-auto">
+              <span className="font-sans text-lg font-semibold text-gray-800">
+                Quantity
+              </span>
+              <div className="flex items-center justify-between w-full">
+                <button
+                  onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                  className="flex items-center justify-center w-12 h-12 text-2xl font-bold text-gray-700 transition duration-300 ease-in-out bg-gray-100 rounded-full hover:bg-gray-200 active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
+                  aria-label="Decrease quantity"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) =>
+                    setQuantity(Math.max(1, parseInt(e.target.value) || 1))
+                  }
+                  className="w-24 px-4 py-2 text-xl text-center transition duration-300 ease-in-out bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  min="1"
+                  inputMode="numeric"
+                />
+                <button
+                  onClick={() => setQuantity((prev) => prev + 1)}
+                  className="flex items-center justify-center w-12 h-12 text-2xl font-bold text-gray-700 transition duration-300 ease-in-out bg-gray-100 rounded-full hover:bg-gray-200 active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
             {/* Action buttons */}
             <div className="flex flex-col gap-4 mt-4">
-              <BuyNowButton
-                product={product}
-                selectedCategory={selectedCategory}
-                selectedColor={selectedColor}
-                variant="default"
-                showQuantityControls={true}
-                className="flex-1"
-                onBuyNowSuccess={() => {
-                  console.log("Buy now action successful!");
-                  setError(null); // Clear any previous errors
-                }}
-                onBuyNowError={(error) => {
-                  setError("Failed to process buy now. Please try again.");
-                  console.error("Buy now error:", error);
-                }}
-              />
-              
-              {/* Cart Manager - Shows when cart has items */}
-              <CartManager
-                variant="default"
-                className="mt-4"
-                onCheckout={handleCheckout}
-              />
-              
+              <button
+                className="flex-1 flex items-center justify-center gap-2 bg-black text-white px-8 py-4 rounded-lg hover:bg-gray-800 transition-colors text-lg font-semibold shadow-lg"
+                onClick={handleBuyNow}
+              >
+                <FiCreditCard /> Buy Now
+              </button>
+              <button
+                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white px-8 py-4 rounded-lg hover:bg-indigo-500 transition-colors text-lg font-semibold shadow-lg"
+                onClick={addToCart}
+              >
+                <FiShoppingCart /> Add to Cart
+              </button>
               <button
                 className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-8 py-4 rounded-lg hover:bg-green-400 transition-colors text-lg font-semibold shadow-lg"
                 onClick={handleWhatsAppOrder}
@@ -545,32 +611,17 @@ export default function ProductDetails() {
       </div>
 
       {/* Related products */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-12 md:mt-20">
-        <h3 className="text-2xl font-bold mb-6 text-gray-900">
-          Related Products
-        </h3>
-        
-        {relatedProductsLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, index) => (
-              <div key={index} className="bg-white p-4 rounded-xl shadow animate-pulse">
-                <div className="w-full aspect-square bg-gray-200 rounded-lg mb-3"></div>
-                <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            ))}
-          </div>
-        ) : relatedProducts.length > 0 ? (
+      {relatedProducts.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 md:px-8 mt-12 md:mt-20">
+          <h3 className="text-2xl font-bold mb-6 text-gray-900">
+            Related Products
+          </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {relatedProducts.map((p) => (
               <div
                 key={p.id}
-                className="bg-white p-4 rounded-xl shadow hover:shadow-md transition-all duration-300 cursor-pointer hover:scale-105"
-                onClick={() => {
-                  // Show loading state before navigation
-                  setRelatedProductsLoading(true);
-                  router.push(`/product/${p.id}`);
-                }}
+                className="bg-white p-4 rounded-xl shadow hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => router.push(`/product/${p.id}`)}
               >
                 <div className="w-full aspect-square relative rounded-lg overflow-hidden">
                   <Image
@@ -585,12 +636,8 @@ export default function ProductDetails() {
               </div>
             ))}
           </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <p>No related products found.</p>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Review popup */}
       <AnimatePresence>
