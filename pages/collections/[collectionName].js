@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../lib/firebase";
 import Image from "next/image";
 import AddToCartButton from "../../componenets/AddToCartButton";
+import BuyNowButton from "../../componenets/BuyNowButton";
 
 const PRODUCTS_PER_PAGE = 12;
 
@@ -526,9 +527,10 @@ export default function CollectionDetailPage() {
                         </div>
                         
                         <div className="px-4 pb-4">
-                          <AddToCartButton 
+                          <BuyNowButton 
                             product={product}
                             variant="compact"
+                            showQuantityControls={true}
                             className="w-full"
                           />
                         </div>
@@ -635,9 +637,10 @@ export default function CollectionDetailPage() {
                         </div>
                         
                         <div className="px-4 pb-4">
-                          <AddToCartButton 
+                          <BuyNowButton 
                             product={product}
                             variant="compact"
+                            showQuantityControls={true}
                             className="w-full"
                           />
                         </div>

@@ -25,6 +25,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import AddToCartButton from "../../componenets/AddToCartButton";
+import BuyNowButton from "../../componenets/BuyNowButton";
 
 // FB Pixel functions
 import {
@@ -74,7 +75,6 @@ export default function ProductDetails() {
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
   const [error, setError] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [quantity, setQuantity] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
 
@@ -206,50 +206,6 @@ export default function ProductDetails() {
     } catch (err) {
       console.error("Failed to submit review:", err);
     }
-  };
-
-  // Buy Now
-  const handleBuyNow = () => {
-    setError(null);
-    const hasCategoryVariants = product.variants?.some((v) => v.size);
-    const hasColorVariants = product.variants?.some((v) => v.color);
-
-    if (hasCategoryVariants && !selectedCategory) {
-      setError("Please select a category before proceeding to checkout.");
-      return;
-    }
-    if (hasColorVariants && !selectedColor) {
-      setError("Please select a color before proceeding to checkout.");
-      return;
-    }
-
-    const productForCheckout = [
-      {
-        ...product,
-        id,
-        quantity,
-        selectedCategory,
-        selectedColor,
-      },
-    ];
-    localStorage.setItem("checkoutItems", JSON.stringify(productForCheckout));
-
-    // FB Pixel InitiateCheckout
-    trackInitiateCheckout(productForCheckout[0], quantity, selectedCategory, selectedColor);
-    if (typeof window !== "undefined" && window.fbq) {
-      window.fbq("track", "InitiateCheckout", {
-        content_name: product.title,
-        content_ids: [id],
-        content_type: "product",
-        value: product.price * quantity,
-        currency: "PKR",
-        quantity,
-        category: selectedCategory,
-        color: selectedColor,
-      });
-    }
-
-    router.push("/checkout");
   };
 
   // WhatsApp order
@@ -464,52 +420,28 @@ export default function ProductDetails() {
               </div>
             )}
 
-            {/* Quantity selector */}
-            <div className="flex flex-col items-start gap-4 p-6 bg-white rounded-xl shadow-lg border border-gray-200 w-full max-w-sm mx-auto">
-              <span className="font-sans text-lg font-semibold text-gray-800">
-                Quantity
-              </span>
-              <div className="flex items-center justify-between w-full">
-                <button
-                  onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                  className="flex items-center justify-center w-12 h-12 text-2xl font-bold text-gray-700 transition duration-300 ease-in-out bg-gray-100 rounded-full hover:bg-gray-200 active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
-                  aria-label="Decrease quantity"
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) =>
-                    setQuantity(Math.max(1, parseInt(e.target.value) || 1))
-                  }
-                  className="w-24 px-4 py-2 text-xl text-center transition duration-300 ease-in-out bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  min="1"
-                  inputMode="numeric"
-                />
-                <button
-                  onClick={() => setQuantity((prev) => prev + 1)}
-                  className="flex items-center justify-center w-12 h-12 text-2xl font-bold text-gray-700 transition duration-300 ease-in-out bg-gray-100 rounded-full hover:bg-gray-200 active:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
-                  aria-label="Increase quantity"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
             {/* Action buttons */}
             <div className="flex flex-col gap-4 mt-4">
-              <button
-                className="flex-1 flex items-center justify-center gap-2 bg-black text-white px-8 py-4 rounded-lg hover:bg-gray-800 transition-colors text-lg font-semibold shadow-lg"
-                onClick={handleBuyNow}
-              >
-                <FiCreditCard /> Buy Now
-              </button>
+              <BuyNowButton
+                product={product}
+                selectedCategory={selectedCategory}
+                selectedColor={selectedColor}
+                variant="default"
+                showQuantityControls={true}
+                className="flex-1"
+                onBuyNowSuccess={() => {
+                  console.log("Buy now successful!");
+                  setError(null); // Clear any previous errors
+                }}
+                onBuyNowError={(error) => {
+                  setError("Failed to process buy now. Please try again.");
+                  console.error("Buy now error:", error);
+                }}
+              />
               <AddToCartButton
                 product={product}
                 selectedCategory={selectedCategory}
                 selectedColor={selectedColor}
-                quantity={quantity}
                 variant="default"
                 redirect={false}
                 className="flex-1"

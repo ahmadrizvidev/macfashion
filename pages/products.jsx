@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import CollectionSection from "../componenets/CollectionSection";
 import AddToCartButton from "../componenets/AddToCartButton";
+import BuyNowButton from "../componenets/BuyNowButton";
 import { FaSpinner, FaFilter, FaTimes, FaSearch } from "react-icons/fa";
 
 // Fabric names data organized by category
@@ -641,9 +642,10 @@ export default function ShopAll() {
                                                 </div>
                                             </Link>
                                             <div className="px-4 pb-4">
-                                                <AddToCartButton 
+                                                <BuyNowButton 
                                                     product={product}
                                                     variant="compact"
+                                                    showQuantityControls={true}
                                                     className="w-full"
                                                 />
                                             </div>

@@ -8,6 +8,7 @@ import { collection, getDocs, query, where, doc, getDoc } from "firebase/firesto
 import { motion } from "framer-motion";
 import { FaStar, FaSpinner } from 'react-icons/fa';
 import AddToCartButton from "./AddToCartButton";
+import BuyNowButton from "./BuyNowButton";
 
 // Function to format price in PKR
 const formatPrice = (price) => {
@@ -144,11 +145,12 @@ export default function SummerTracksuits() {
               </div>
             </Link>
             
-            {/* Add to Cart Button - Outside Link to prevent conflicts */}
+            {/* Buy Now Button - Outside Link to prevent conflicts */}
             <div className="px-5 pb-5">
-              <AddToCartButton 
+              <BuyNowButton 
                 product={product}
                 variant="compact"
+                showQuantityControls={true}
                 className="w-full"
               />
             </div>

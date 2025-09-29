@@ -7,6 +7,7 @@ import { db } from "../lib/firebase";
 import { collection, getDocs, query, where, limit } from "firebase/firestore";
 import { FaStar, FaSpinner } from "react-icons/fa";
 import AddToCartButton from "./AddToCartButton";
+import BuyNowButton from "./BuyNowButton";
 
 // Memoized price formatter
 const formatPrice = (price) => {
@@ -231,9 +232,10 @@ export default function CollectionProducts({ collectionName }) {
                 </div>
               </Link>
               <div className="px-3 pb-3">
-                <AddToCartButton 
+                <BuyNowButton 
                   product={product}
                   variant="compact"
+                  showQuantityControls={true}
                   className="w-full"
                 />
               </div>
